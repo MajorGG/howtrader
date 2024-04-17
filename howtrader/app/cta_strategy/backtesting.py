@@ -288,12 +288,12 @@ class BacktestingEngine:
 
             self.datetime = data.datetime
 
-            try:
-                self.callback(data)
-            except Exception:
-                self.output("raise exception, stop backtesting")
-                self.output(traceback.format_exc())
-                return
+            # try:
+            #     self.callback(data)
+            # except Exception:
+            #     self.output("raise exception, stop backtesting")
+            #     self.output(traceback.format_exc())
+            #     return
 
         self.strategy.inited = True
         self.output("initialize strategy")
