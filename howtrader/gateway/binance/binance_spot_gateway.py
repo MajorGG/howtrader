@@ -81,7 +81,7 @@ INTERVAL_VT2BINANCE: Dict[Interval, str] = {
     Interval.MINUTE: "1m",
     Interval.MINUTE_3: "3m",
     Interval.MINUTE_5: "5m",
-    Interval.MINUTE_15: "15",
+    Interval.MINUTE_15: "15m",
     Interval.MINUTE_30: "30m",
     Interval.HOUR: "1h",
     Interval.HOUR_2: "2h",
@@ -98,6 +98,10 @@ INTERVAL_VT2BINANCE: Dict[Interval, str] = {
 # time delta mapping
 TIMEDELTA_MAP: Dict[Interval, timedelta] = {
     Interval.MINUTE: timedelta(minutes=1),
+    Interval.MINUTE_3: timedelta(minutes=3),
+    Interval.MINUTE_5: timedelta(minutes=5),
+    Interval.MINUTE_15: timedelta(minutes=15),
+    Interval.MINUTE_30: timedelta(minutes=30),
     Interval.HOUR: timedelta(hours=1),
     Interval.DAILY: timedelta(days=1),
 }
