@@ -106,6 +106,9 @@ class MongodbDatabase(BaseDatabase):
                 "high_price": bar.high_price,
                 "low_price": bar.low_price,
                 "close_price": bar.close_price,
+                "cnt": bar.cnt,
+                "buy_vol": bar.buy_vol,
+                "buy_amt": bar.buy_amt
             }
 
             requests.append(ReplaceOne(filter_, d, upsert=True))

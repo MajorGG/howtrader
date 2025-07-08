@@ -51,6 +51,9 @@ class DbBarData(Model):
     high_price: float = FloatField()
     low_price: float = FloatField()
     close_price: float = FloatField()
+    cnt: int = IntegerField()
+    buy_vol: float = FloatField()
+    buy_amt: float = FloatField()
 
     class Meta:
         database = db
@@ -250,6 +253,9 @@ class MysqlDatabase(BaseDatabase):
                 high_price=db_bar.high_price,
                 low_price=db_bar.low_price,
                 close_price=db_bar.close_price,
+                cnt=db_bar.cnt,
+                buy_vol=db_bar.buy_vol,
+                buy_amt=db_bar.buy_amt,
                 gateway_name="DB"
             )
             bars.append(bar)

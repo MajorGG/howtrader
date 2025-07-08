@@ -1066,6 +1066,9 @@ class BinanceUsdtRestApi(RestClient):
                         high_price=float(row[2]),
                         low_price=float(row[3]),
                         close_price=float(row[4]),
+                        cnt=int(row[8]),
+                        buy_vol=float(row[9]),
+                        buy_amt=float(row[10]),
                         gateway_name=self.gateway_name
                     )
                     buf.append(bar)
