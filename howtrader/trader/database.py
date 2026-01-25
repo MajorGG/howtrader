@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .constant import Interval, Exchange
-from .object import BarData, TickData
+from .object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio
 from .setting import SETTINGS
 
 
@@ -42,6 +42,41 @@ class BaseDatabase(ABC):
 
     @abstractmethod
     def save_bar_data(self, bars: List[BarData]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def save_open_interest_hist(self, bars: List[OpenInterestHist]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def save_global_long_short_account_ratio(self, bars: List[GlobalLongShortAccountRatio]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def save_taker_long_short_ratio(self, bars: List[TakerLongShortRatio]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def save_top_long_short_account_ratio(self, bars: List[TopLongShortAccountRatio]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def save_top_long_short_position_ratio(self, bars: List[TopLongShortPositionRatio]) -> bool:
         """
         Save bar data into database.
         """

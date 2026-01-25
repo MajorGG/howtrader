@@ -1,6 +1,6 @@
 import sys
 from time import sleep
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from logging import INFO
 
 from howtrader.event import EventEngine
@@ -39,7 +39,6 @@ if __name__ == "__main__":
     # data: [BarData] = database.load_bar_data(symbol, exchange, interval, start, end)
     # print(len(data))
 
-
     """
         for crawling data from Binance exchange.
     """
@@ -59,29 +58,54 @@ if __name__ == "__main__":
     gate_way = main_engine.get_gateway("BINANCE_USDT")  # future
     # print(gate_way)
 
-    symbol = "BTCUSDT"
+    # symbol = "BTCUSDT"
     # symbol = "btcusdt"
-    # symbol = "ETHUSDT"
+    symbol = "ETHUSDT"
     # symbol = "ETHBTC"
     # symbol = "ethusdt"  # spot for lower case while the future will be upper case.
 
     exchange = Exchange.BINANCE  # binance.
     interval = Interval.MINUTE_15  # minute
 
-    start = datetime(2025, 2, 1)
-    end = datetime(2025, 2, 15)
+    # start = datetime(2025, 12, 20)
+    start = datetime.now() - timedelta(days=30)
+    # end = datetime(2025, 2, 15)
     req = HistoryRequest(
         symbol=symbol,
         exchange=exchange,
         interval=interval,
         start=start,
-        end=end
+        # end=end
     )
 
-    bars = gate_way.query_history(req)
+    # bars = gate_way.open_interest_hist(req)
+    # print(len(bars))
+
+    # req.start = datetime.now() - timedelta(days=30)
+    # bars = gate_way.global_long_short_account_ratio(req)
+    # print(len(bars))
+    # print(database.save_global_long_short_account_ratio(bars))
+    #
+    # req.start = datetime.now() - timedelta(days=30)
+    # bars = gate_way.taker_long_short_ratio(req)
+    # print(len(bars))
+    # print(database.save_taker_long_short_ratio(bars))
+    #
+    # req.start = datetime.now() - timedelta(days=30)
+    # bars = gate_way.top_long_short_account_ratio(req)
+    # print(len(bars))
+    # print(database.save_top_long_short_account_ratio(bars))
+
+    req.start = datetime.now() - timedelta(days=30)
+    bars = gate_way.top_long_short_position_ratio(req)
     print(len(bars))
-    if bars:
-        database.save_bar_data(bars)
+    print(database.save_top_long_short_position_ratio(bars))
+
+    req.start = datetime.now() - timedelta(days=30)
+    req.interval = Interval.MINUTE_5
+    bars = gate_way.top_long_short_position_ratio(req)
+    print(len(bars))
+    print(database.save_top_long_short_position_ratio(bars))
 
     print('success')
     # am = ArrayManager()

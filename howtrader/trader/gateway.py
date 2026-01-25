@@ -33,7 +33,12 @@ from .object import (
     Exchange,
     BarData,
     OriginalKlineData,
-    FundingRateData
+    FundingRateData,
+    OpenInterestHist,
+    TopLongShortAccountRatio,
+    TopLongShortPositionRatio,
+    GlobalLongShortAccountRatio,
+    TakerLongShortRatio
 )
 
 
@@ -289,6 +294,36 @@ class BaseGateway(ABC):
         pass
 
     def query_history(self, req: HistoryRequest) -> List[BarData]:
+        """
+        Query bar history data.
+        """
+        pass
+
+    def open_interest_hist(self, req: HistoryRequest) -> List[OpenInterestHist]:
+        """
+        Query bar history data.
+        """
+        pass
+
+    def taker_long_short_ratio(self, req: HistoryRequest) -> List[TakerLongShortRatio]:
+        """
+        Query bar history data.
+        """
+        pass
+
+    def global_long_short_account_ratio(self, req: HistoryRequest) -> List[GlobalLongShortAccountRatio]:
+        """
+        Query bar history data.
+        """
+        pass
+
+    def top_long_short_account_ratio(self, req: HistoryRequest) -> List[TopLongShortAccountRatio]:
+        """
+        Query bar history data.
+        """
+        pass
+
+    def top_long_short_position_ratio(self, req: HistoryRequest) -> List[TopLongShortPositionRatio]:
         """
         Query bar history data.
         """

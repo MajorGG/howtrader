@@ -15,7 +15,7 @@ from peewee import (
 )
 
 from howtrader.trader.constant import Exchange, Interval
-from howtrader.trader.object import BarData, TickData
+from howtrader.trader.object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio
 from howtrader.trader.utility import get_file_path
 from howtrader.trader.database import (
     BaseDatabase,
@@ -49,6 +49,101 @@ class DbBarData(Model):
     cnt: int = IntegerField()
     buy_vol: float = FloatField()
     buy_amt: float = FloatField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
+
+
+class DbOpenInterestHist(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: DateTimeField = DateTimeField()
+    interval: str = CharField()
+
+    sumOpenInterest: float = FloatField()
+    sumOpenInterestValue: float = FloatField()
+    CMCCirculatingSupply: float = FloatField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
+
+
+class DbTopLongShortPositionRatio(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: DateTimeField = DateTimeField()
+    interval: str = CharField()
+
+    longShortRatio: float = FloatField()
+    longAccount: float = FloatField()
+    shortAccount: float = FloatField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
+
+
+class DbTopLongShortAccountRatio(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: DateTimeField = DateTimeField()
+    interval: str = CharField()
+
+    longShortRatio: float = FloatField()
+    longAccount: float = FloatField()
+    shortAccount: float = FloatField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
+
+
+class DbGlobalLongShortAccountRatio(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: DateTimeField = DateTimeField()
+    interval: str = CharField()
+
+    longShortRatio: float = FloatField()
+    longAccount: float = FloatField()
+    shortAccount: float = FloatField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
+
+
+class DbTakerLongShortRatio(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    datetime: DateTimeField = DateTimeField()
+    interval: str = CharField()
+
+    buySellRatio: float = FloatField()
+    buyVol: float = FloatField()
+    sellVol: float = FloatField()
 
     class Meta:
         database = db
@@ -133,7 +228,9 @@ class SqliteDatabase(BaseDatabase):
         """"""
         self.db = db
         self.db.connect()
-        self.db.create_tables([DbBarData, DbTickData, DbBarOverview])
+        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTakerLongShortRatio,
+                               DbTopLongShortAccountRatio, DbTopLongShortPositionRatio,
+                               DbGlobalLongShortAccountRatio, DbOpenInterestHist])
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """save bar data"""
@@ -188,6 +285,111 @@ class SqliteDatabase(BaseDatabase):
             overview.count = s.count()
 
         overview.save()
+
+        return True
+
+    def save_open_interest_hist(self, bars: List[OpenInterestHist]) -> bool:
+
+        data = []
+
+        for bar in bars:
+            bar.datetime = convert_tz(bar.datetime)
+
+            d = bar.__dict__
+            d["exchange"] = d["exchange"].value
+            d["interval"] = d["interval"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use upsert to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 50):
+                DbOpenInterestHist.insert_many(c).on_conflict_replace().execute()
+
+        return True
+
+    def save_global_long_short_account_ratio(self, bars: List[GlobalLongShortAccountRatio]) -> bool:
+
+        data = []
+
+        for bar in bars:
+            bar.datetime = convert_tz(bar.datetime)
+
+            d = bar.__dict__
+            d["exchange"] = d["exchange"].value
+            d["interval"] = d["interval"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use upsert to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 50):
+                DbGlobalLongShortAccountRatio.insert_many(c).on_conflict_replace().execute()
+
+        return True
+
+    def save_taker_long_short_ratio(self, bars: List[TakerLongShortRatio]) -> bool:
+
+        data = []
+
+        for bar in bars:
+            bar.datetime = convert_tz(bar.datetime)
+
+            d = bar.__dict__
+            d["exchange"] = d["exchange"].value
+            d["interval"] = d["interval"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use upsert to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 50):
+                DbTakerLongShortRatio.insert_many(c).on_conflict_replace().execute()
+
+        return True
+
+    def save_top_long_short_account_ratio(self, bars: List[TopLongShortAccountRatio]) -> bool:
+
+        data = []
+
+        for bar in bars:
+            bar.datetime = convert_tz(bar.datetime)
+
+            d = bar.__dict__
+            d["exchange"] = d["exchange"].value
+            d["interval"] = d["interval"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use upsert to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 50):
+                DbTopLongShortAccountRatio.insert_many(c).on_conflict_replace().execute()
+
+        return True
+
+    def save_top_long_short_position_ratio(self, bars: List[TopLongShortPositionRatio]) -> bool:
+
+        data = []
+
+        for bar in bars:
+            bar.datetime = convert_tz(bar.datetime)
+
+            d = bar.__dict__
+            d["exchange"] = d["exchange"].value
+            d["interval"] = d["interval"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use upsert to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 50):
+                DbTopLongShortPositionRatio.insert_many(c).on_conflict_replace().execute()
 
         return True
 

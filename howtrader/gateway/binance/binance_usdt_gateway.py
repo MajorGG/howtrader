@@ -42,7 +42,12 @@ from howtrader.trader.object import (
     SubscribeRequest,
     HistoryRequest,
     OriginalKlineData,
-    FundingRateData
+    FundingRateData,
+    OpenInterestHist,
+    TopLongShortAccountRatio,
+    TopLongShortPositionRatio,
+    GlobalLongShortAccountRatio,
+    TakerLongShortRatio
 )
 from howtrader.trader.event import EVENT_TIMER
 from howtrader.event import Event, EventEngine
@@ -51,13 +56,13 @@ from howtrader.api.rest import Request, RestClient, Response
 from howtrader.api.websocket import WebsocketClient
 from howtrader.trader.constant import LOCAL_TZ
 from howtrader.trader.setting import SETTINGS
+
 # rest api host
 F_REST_HOST: str = "https://fapi.binance.com"
 
 # ws api host
 F_WEBSOCKET_TRADE_HOST: str = "wss://fstream.binance.com/ws/"
 F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/stream"
-
 
 # Order status map
 STATUS_BINANCES2VT: Dict[str, Status] = {
@@ -210,6 +215,26 @@ class BinanceUsdtGateway(BaseGateway):
     def query_history(self, req: HistoryRequest) -> List[BarData]:
         """query historical kline data"""
         return self.rest_api.query_history(req)
+
+    def open_interest_hist(self, req: HistoryRequest) -> List[OpenInterestHist]:
+        """query historical kline data"""
+        return self.rest_api.open_interest_hist(req)
+
+    def global_long_short_account_ratio(self, req: HistoryRequest) -> List[GlobalLongShortAccountRatio]:
+        """query historical kline data"""
+        return self.rest_api.global_long_short_account_ratio(req)
+
+    def taker_long_short_ratio(self, req: HistoryRequest) -> List[TakerLongShortRatio]:
+        """query historical kline data"""
+        return self.rest_api.taker_long_short_ratio(req)
+
+    def top_long_short_account_ratio(self, req: HistoryRequest) -> List[TopLongShortAccountRatio]:
+        """query historical kline data"""
+        return self.rest_api.top_long_short_account_ratio(req)
+
+    def top_long_short_position_ratio(self, req: HistoryRequest) -> List[TopLongShortPositionRatio]:
+        """query historical kline data"""
+        return self.rest_api.top_long_short_position_ratio(req)
 
     def close(self) -> None:
         """close api connection"""
@@ -627,7 +652,7 @@ class BinanceUsdtRestApi(RestClient):
     def on_query_time_failed(self, status_code: int, request: Request):
         self.query_time()
 
-    def on_query_time_error(self,  exception_type: type, exception_value: Exception, tb, request: Request) -> None:
+    def on_query_time_error(self, exception_type: type, exception_value: Exception, tb, request: Request) -> None:
         self.query_time()
 
     def on_query_account(self, datas: list, request: Request) -> None:
@@ -721,7 +746,7 @@ class BinanceUsdtRestApi(RestClient):
             type=order_type,
             direction=DIRECTION_BINANCES2VT[data["side"]],
             status=STATUS_BINANCES2VT.get(data["status"], Status.NOTTRADED),
-            datetime=generate_datetime(data.get("time", time.time()*1000)),
+            datetime=generate_datetime(data.get("time", time.time() * 1000)),
             gateway_name=self.gateway_name,
         )
         self.gateway.on_order(order)
@@ -752,7 +777,7 @@ class BinanceUsdtRestApi(RestClient):
                 type=order_type,
                 direction=DIRECTION_BINANCES2VT[data["side"]],
                 status=STATUS_BINANCES2VT.get(data["status"], Status.NOTTRADED),
-                datetime=generate_datetime(data.get("time", time.time()*1000)),
+                datetime=generate_datetime(data.get("time", time.time() * 1000)),
                 gateway_name=self.gateway_name,
             )
             self.gateway.on_order(order)
@@ -821,8 +846,6 @@ class BinanceUsdtRestApi(RestClient):
                 last_funding_rate=float(fund_data['lastFundingRate']) * 100,
                 gateway_name=self.gateway_name
             )
-
-
 
             self.gateway.on_funding_rate(funding_rate)
 
@@ -904,7 +927,7 @@ class BinanceUsdtRestApi(RestClient):
                 type=order_type,
                 direction=DIRECTION_BINANCES2VT.get(data.get("side")),
                 status=STATUS_BINANCES2VT.get(data.get("status"), Status.CANCELLED),
-                datetime=generate_datetime(float(data.get("updateTime", time.time()*1000))),
+                datetime=generate_datetime(float(data.get("updateTime", time.time() * 1000))),
                 gateway_name=self.gateway_name,
             )
             self.gateway.on_order(order)
@@ -1069,6 +1092,386 @@ class BinanceUsdtRestApi(RestClient):
                         cnt=int(row[8]),
                         buy_vol=float(row[9]),
                         buy_amt=float(row[10]),
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                begin: datetime = buf[0].datetime
+                end: datetime = buf[-1].datetime
+
+                history.extend(buf)
+                msg: str = f"query historical kline data successfully, " \
+                           f"{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # if the data len is less than limit, break the while loop
+                if len(data) < limit:
+                    break
+
+                # update start time
+                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_time = int(datetime.timestamp(start_dt))
+
+        return history
+
+    def open_interest_hist(self, req: HistoryRequest) -> List[OpenInterestHist]:
+        """query historical kline data"""
+        history: List[OpenInterestHist] = []
+        limit: int = 500
+
+        start_time: int = int(datetime.timestamp(req.start))
+
+        while True:
+            # query parameters
+            params: dict = {
+                "symbol": req.symbol,
+                "period": INTERVAL_VT2BINANCES[req.interval],
+                "limit": limit,
+                "startTime": start_time * 1000
+            }
+
+            path: str = "/futures/data/openInterestHist"
+            if req.end:
+                end_time = int(datetime.timestamp(req.end))
+                params["endTime"] = end_time * 1000  # convert the start time into milliseconds
+            else:
+                end_time = start_time + TIMEDELTA_MAP[req.interval].seconds * 500
+                params["endTime"] = end_time * 1000
+
+            resp: Response = self.request(
+                "GET",
+                path=path,
+                data={"security": Security.NONE},
+                params=params
+            )
+
+            # will break the while loop if the request failed
+            if resp.status_code // 100 != 2:
+                msg: str = f"query historical kline data failed, status code：{resp.status_code}，msg：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"historical kline data is empty, start time：{start_time}"
+                    self.gateway.write_log(msg)
+                    break
+
+                buf: List[OpenInterestHist] = []
+
+                for row in data:
+                    bar: OpenInterestHist = OpenInterestHist(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(row['timestamp']),
+                        interval=req.interval,
+                        sumOpenInterest=row['sumOpenInterest'],
+                        sumOpenInterestValue=row['sumOpenInterestValue'],
+                        CMCCirculatingSupply=row['CMCCirculatingSupply'],
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                begin: datetime = buf[0].datetime
+                end: datetime = buf[-1].datetime
+
+                history.extend(buf)
+                msg: str = f"query historical kline data successfully, " \
+                           f"{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # if the data len is less than limit, break the while loop
+                if len(data) < limit:
+                    break
+
+                # update start time
+                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_time = int(datetime.timestamp(start_dt))
+
+        return history
+
+    def taker_long_short_ratio(self, req: HistoryRequest) -> List[TakerLongShortRatio]:
+        """query historical kline data"""
+        history: List[TakerLongShortRatio] = []
+        limit: int = 500
+
+        start_time: int = int(datetime.timestamp(req.start))
+
+        while True:
+            # query parameters
+            params: dict = {
+                "symbol": req.symbol,
+                "period": INTERVAL_VT2BINANCES[req.interval],
+                "limit": limit,
+                "startTime": start_time * 1000
+            }
+
+            path: str = "/futures/data/takerlongshortRatio"
+            if req.end:
+                end_time = int(datetime.timestamp(req.end))
+                params["endTime"] = end_time * 1000  # convert the start time into milliseconds
+            else:
+                end_time = start_time + TIMEDELTA_MAP[req.interval].seconds * 500
+                params["endTime"] = end_time * 1000
+
+            resp: Response = self.request(
+                "GET",
+                path=path,
+                data={"security": Security.NONE},
+                params=params
+            )
+
+            # will break the while loop if the request failed
+            if resp.status_code // 100 != 2:
+                msg: str = f"query historical kline data failed, status code：{resp.status_code}，msg：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"historical kline data is empty, start time：{start_time}"
+                    self.gateway.write_log(msg)
+                    break
+
+                buf: List[TakerLongShortRatio] = []
+
+                for row in data:
+                    bar: TakerLongShortRatio = TakerLongShortRatio(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(row['timestamp']),
+                        interval=req.interval,
+                        buySellRatio=row['buySellRatio'],
+                        buyVol=row['buyVol'],
+                        sellVol=row['sellVol'],
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                begin: datetime = buf[0].datetime
+                end: datetime = buf[-1].datetime
+
+                history.extend(buf)
+                msg: str = f"query historical kline data successfully, " \
+                           f"{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # if the data len is less than limit, break the while loop
+                if len(data) < limit:
+                    break
+
+                # update start time
+                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_time = int(datetime.timestamp(start_dt))
+
+        return history
+
+    def global_long_short_account_ratio(self, req: HistoryRequest) -> List[GlobalLongShortAccountRatio]:
+        """query historical kline data"""
+        history: List[GlobalLongShortAccountRatio] = []
+        limit: int = 500
+
+        start_time: int = int(datetime.timestamp(req.start))
+
+        while True:
+            # query parameters
+            params: dict = {
+                "symbol": req.symbol,
+                "period": INTERVAL_VT2BINANCES[req.interval],
+                "limit": limit,
+                "startTime": start_time * 1000
+            }
+
+            path: str = "/futures/data/globalLongShortAccountRatio"
+            if req.end:
+                end_time = int(datetime.timestamp(req.end))
+                params["endTime"] = end_time * 1000  # convert the start time into milliseconds
+            else:
+                end_time = start_time + TIMEDELTA_MAP[req.interval].seconds * 500
+                params["endTime"] = end_time * 1000
+
+            resp: Response = self.request(
+                "GET",
+                path=path,
+                data={"security": Security.NONE},
+                params=params
+            )
+
+            # will break the while loop if the request failed
+            if resp.status_code // 100 != 2:
+                msg: str = f"query historical kline data failed, status code：{resp.status_code}，msg：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"historical kline data is empty, start time：{start_time}"
+                    self.gateway.write_log(msg)
+                    break
+
+                buf: List[GlobalLongShortAccountRatio] = []
+
+                for row in data:
+                    bar: GlobalLongShortAccountRatio = GlobalLongShortAccountRatio(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(row['timestamp']),
+                        interval=req.interval,
+                        longShortRatio=row['longShortRatio'],
+                        longAccount=row['longAccount'],
+                        shortAccount=row['shortAccount'],
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                begin: datetime = buf[0].datetime
+                end: datetime = buf[-1].datetime
+
+                history.extend(buf)
+                msg: str = f"query historical kline data successfully, " \
+                           f"{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # if the data len is less than limit, break the while loop
+                if len(data) < limit:
+                    break
+
+                # update start time
+                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_time = int(datetime.timestamp(start_dt))
+
+        return history
+
+    def top_long_short_account_ratio(self, req: HistoryRequest) -> List[TopLongShortAccountRatio]:
+        """query historical kline data"""
+        history: List[TopLongShortAccountRatio] = []
+        limit: int = 500
+
+        start_time: int = int(datetime.timestamp(req.start))
+
+        while True:
+            # query parameters
+            params: dict = {
+                "symbol": req.symbol,
+                "period": INTERVAL_VT2BINANCES[req.interval],
+                "limit": limit,
+                "startTime": start_time * 1000
+            }
+
+            path: str = "/futures/data/topLongShortAccountRatio"
+            if req.end:
+                end_time = int(datetime.timestamp(req.end))
+                params["endTime"] = end_time * 1000  # convert the start time into milliseconds
+            else:
+                end_time = start_time + TIMEDELTA_MAP[req.interval].seconds * 500
+                params["endTime"] = end_time * 1000
+
+            resp: Response = self.request(
+                "GET",
+                path=path,
+                data={"security": Security.NONE},
+                params=params
+            )
+
+            # will break the while loop if the request failed
+            if resp.status_code // 100 != 2:
+                msg: str = f"query historical kline data failed, status code：{resp.status_code}，msg：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"historical kline data is empty, start time：{start_time}"
+                    self.gateway.write_log(msg)
+                    break
+
+                buf: List[TopLongShortAccountRatio] = []
+
+                for row in data:
+                    bar: TopLongShortAccountRatio = TopLongShortAccountRatio(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(row['timestamp']),
+                        interval=req.interval,
+                        longShortRatio=row['longShortRatio'],
+                        longAccount=row['longAccount'],
+                        shortAccount=row['shortAccount'],
+                        gateway_name=self.gateway_name
+                    )
+                    buf.append(bar)
+
+                begin: datetime = buf[0].datetime
+                end: datetime = buf[-1].datetime
+
+                history.extend(buf)
+                msg: str = f"query historical kline data successfully, " \
+                           f"{req.symbol} - {req.interval.value}，{begin} - {end}"
+                self.gateway.write_log(msg)
+
+                # if the data len is less than limit, break the while loop
+                if len(data) < limit:
+                    break
+
+                # update start time
+                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_time = int(datetime.timestamp(start_dt))
+
+        return history
+
+    def top_long_short_position_ratio(self, req: HistoryRequest) -> List[TopLongShortPositionRatio]:
+        """query historical kline data"""
+        history: List[TopLongShortPositionRatio] = []
+        limit: int = 500
+
+        start_time: int = int(datetime.timestamp(req.start))
+
+        while True:
+            # query parameters
+            params: dict = {
+                "symbol": req.symbol,
+                "period": INTERVAL_VT2BINANCES[req.interval],
+                "limit": limit,
+                "startTime": start_time * 1000
+            }
+
+            path: str = "/futures/data/topLongShortPositionRatio"
+            if req.end:
+                end_time = int(datetime.timestamp(req.end))
+                params["endTime"] = end_time * 1000  # convert the start time into milliseconds
+            else:
+                end_time = start_time + TIMEDELTA_MAP[req.interval].seconds * 500
+                params["endTime"] = end_time * 1000
+
+            resp: Response = self.request(
+                "GET",
+                path=path,
+                data={"security": Security.NONE},
+                params=params
+            )
+
+            # will break the while loop if the request failed
+            if resp.status_code // 100 != 2:
+                msg: str = f"query historical kline data failed, status code：{resp.status_code}，msg：{resp.text}"
+                self.gateway.write_log(msg)
+                break
+            else:
+                data: dict = resp.json()
+                if not data:
+                    msg: str = f"historical kline data is empty, start time：{start_time}"
+                    self.gateway.write_log(msg)
+                    break
+
+                buf: List[TopLongShortPositionRatio] = []
+
+                for row in data:
+                    bar: TopLongShortPositionRatio = TopLongShortPositionRatio(
+                        symbol=req.symbol,
+                        exchange=req.exchange,
+                        datetime=generate_datetime(row['timestamp']),
+                        interval=req.interval,
+                        longShortRatio=row['longShortRatio'],
+                        longAccount=row['longAccount'],
+                        shortAccount=row['shortAccount'],
                         gateway_name=self.gateway_name
                     )
                     buf.append(bar)

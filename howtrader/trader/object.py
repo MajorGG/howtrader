@@ -108,6 +108,106 @@ class BarData(BaseData):
 
 
 @dataclass
+class OpenInterestHist(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    sumOpenInterest: float = 0
+    sumOpenInterestValue: float = 0
+    CMCCirculatingSupply: float = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class TopLongShortPositionRatio(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    longShortRatio: float = 0
+    longAccount: float = 0
+    shortAccount: float = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class TopLongShortAccountRatio(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    longShortRatio: float = 0
+    longAccount: float = 0
+    shortAccount: float = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class GlobalLongShortAccountRatio(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    longShortRatio: float = 0
+    longAccount: float = 0
+    shortAccount: float = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
+class TakerLongShortRatio(BaseData):
+    """
+    Candlestick bar data of a certain trading period.
+    """
+
+    symbol: str
+    exchange: Exchange
+    datetime: datetime
+
+    interval: Interval = None
+    buySellRatio: float = 0
+    buyVol: float = 0
+    sellVol: float = 0
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
 class OrderData(BaseData):
     """
     Order data contains information for tracking lastest status
