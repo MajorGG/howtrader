@@ -50,6 +50,7 @@ from howtrader.api.rest import Request, RestClient, Response
 from howtrader.api.websocket import WebsocketClient
 from howtrader.trader.constant import LOCAL_TZ
 from howtrader.trader.setting import SETTINGS
+
 # rest api host for inverse future
 D_REST_HOST: str = "https://dapi.binance.com"
 
@@ -516,11 +517,21 @@ class BinanceInverseRestApi(RestClient):
             "side": DIRECTION_VT2BINANCES[req.direction],
             "quantity": req.volume,
             "newClientOrderId": orderid,
-            "newOrderRespType":"RESULT"
+            "newOrderRespType": "RESULT"
         }
 
         if req.type == OrderType.TAKER:
             params["type"] = "MARKET"
+
+        elif req.type == OrderType.STOP:
+            params["type"] = "STOP_MARKET"
+            params["stopPrice"] = req.price
+
+        elif req.type == OrderType.STOP_LIMIT:
+            params["type"] = "STOP_LIMIT"
+            params["stopPrice"] = req.price
+            params["price"] = req.price
+
         else:
             order_type, time_condition = ORDERTYPE_VT2BINANCES[req.type]
             params["type"] = order_type
@@ -649,7 +660,7 @@ class BinanceInverseRestApi(RestClient):
         self.gateway.write_log("query account successfully")
 
     def on_query_position_side(self, data: dict, request: Request) -> None:
-        if data.get("dualSidePosition", False): # true will means dual position side
+        if data.get("dualSidePosition", False):  # true will means dual position side
             self.set_position_side()
 
     def set_position_side(self) -> None:
@@ -668,7 +679,8 @@ class BinanceInverseRestApi(RestClient):
             callback=self.on_set_position_side,
             data=data
         )
-    def on_set_position_side(self, data: dict, request:Request) -> None:
+
+    def on_set_position_side(self, data: dict, request: Request) -> None:
         self.gateway.write_log("set position side to one-way mode")
 
     def on_query_position(self, data: list, request: Request) -> None:
@@ -718,7 +730,7 @@ class BinanceInverseRestApi(RestClient):
             type=order_type,
             direction=DIRECTION_BINANCES2VT[data["side"]],
             status=STATUS_BINANCES2VT.get(data["status"], Status.NOTTRADED),
-            datetime=generate_datetime(data.get("time", time.time()*1000)),
+            datetime=generate_datetime(data.get("time", time.time() * 1000)),
             gateway_name=self.gateway_name,
         )
         self.gateway.on_order(order)
@@ -820,7 +832,6 @@ class BinanceInverseRestApi(RestClient):
 
             self.gateway.on_funding_rate(funding_rate)
 
-
     def on_send_order(self, data: dict, request: Request) -> None:
         """send order callback"""
         if request.extra:
@@ -883,7 +894,7 @@ class BinanceInverseRestApi(RestClient):
             type=order_type,
             direction=DIRECTION_BINANCES2VT[data["side"]],
             status=STATUS_BINANCES2VT.get(data["status"], Status.CANCELLED),
-            datetime=generate_datetime(data.get("updateTime", time.time()*1000)),
+            datetime=generate_datetime(data.get("updateTime", time.time() * 1000)),
             gateway_name=self.gateway_name,
         )
         self.gateway.on_order(order)
@@ -965,14 +976,15 @@ class BinanceInverseRestApi(RestClient):
             data={"security": Security.NONE}
         )
 
-    def on_query_latest_kline(self, datas:list, request: Request):
+    def on_query_latest_kline(self, datas: list, request: Request):
         if len(datas) > 0:
-            df = pd.DataFrame(datas, dtype=np.float64, columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'turnover',
+            df = pd.DataFrame(datas, dtype=np.float64,
+                              columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'turnover',
                                        'a2',
                                        'a3', 'a4', 'a5'])
             df = df[['open_time', 'open', 'high', 'low', 'close', 'volume', 'turnover']]
             df.set_index('open_time', inplace=True)
-            df.index = pd.to_datetime(df.index, unit='ms') # + pd.Timedelta(hours=8) # use the utc time.
+            df.index = pd.to_datetime(df.index, unit='ms')  # + pd.Timedelta(hours=8) # use the utc time.
 
             symbol = request.params.get("symbol", "")
             interval = Interval(request.params.get('interval'))
@@ -1171,6 +1183,7 @@ class BinanceInverseTradeWebsocketApi(WebsocketClient):
         )
 
         self.gateway.on_order(order)
+
 
 class BinanceInverseDataWebsocketApi(WebsocketClient):
     """binance inverse data ws"""
