@@ -236,6 +236,13 @@ class MainEngine:
         else:
             return None
 
+    def gateway_histr_func_call(self, req: HistoryRequest, gateway_name: str, func: str):
+        gateway: BaseGateway = self.get_gateway(gateway_name)
+        if gateway:
+            return getattr(gateway, func)(req)
+        else:
+            return None
+
     def query_position(self, gateway_name: str):
         gateway: BaseGateway = self.get_gateway(gateway_name)
         if gateway and hasattr(gateway, "query_position"):

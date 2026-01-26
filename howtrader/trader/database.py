@@ -82,6 +82,77 @@ class BaseDatabase(ABC):
         """
         pass
 
+
+    @abstractmethod
+    def load_open_interest_hist(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[OpenInterestHist]:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def load_global_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[GlobalLongShortAccountRatio]:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def load_taker_long_short_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TakerLongShortRatio]:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def load_top_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TopLongShortAccountRatio]:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def load_top_long_short_position_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TopLongShortPositionRatio]:
+        """
+        Save bar data into database.
+        """
+        pass
+
     @abstractmethod
     def save_tick_data(self, ticks: List[TickData]) -> bool:
         """
@@ -137,6 +208,46 @@ class BaseDatabase(ABC):
         """
         Delete all tick data with given symbol + exchange.
         """
+        pass
+
+    @abstractmethod
+    def delete_open_interest_hist(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        pass
+
+    @abstractmethod
+    def delete_global_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        pass
+
+    @abstractmethod
+    def delete_taker_long_short_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        pass
+
+    @abstractmethod
+    def delete_top_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        pass
+
+    @abstractmethod
+    def delete_top_long_short_position_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
         pass
 
     @abstractmethod

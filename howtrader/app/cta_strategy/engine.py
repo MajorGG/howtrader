@@ -548,6 +548,7 @@ class CtaEngine(BaseEngine):
         :return: AccountData data or None
         """
         return self.main_engine.get_account(vt_accountid)
+
     def load_bar(
         self,
         vt_symbol: str,
@@ -592,6 +593,37 @@ class CtaEngine(BaseEngine):
             return bars
 
         return []
+
+    def invoke_gateway_histr_func(
+        self,
+        vt_symbol: str,
+        days: int,
+        interval: Interval,
+        func: str
+    ):
+
+        symbol, exchange = extract_vt_symbol(vt_symbol)
+        end: datetime = datetime.now(LOCAL_TZ)
+        start: datetime = end - timedelta(days)
+
+        contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
+
+        if contract and contract.history_data:
+            req: HistoryRequest = HistoryRequest(
+                symbol=symbol,
+                exchange=exchange,
+                interval=interval,
+                start=start,
+                end=end
+            )
+            bars = self.main_engine.gateway_histr_func_call(req, contract.gateway_name, func)
+            if bars:
+                return bars
+
+        return []
+
+    def get_database(self) -> BaseDatabase:
+        return self.database
 
     def query_latest_kline(self, vt_symbol: str, interval: Interval, limit: int = 1000) -> None:
         symbol, exchange = extract_vt_symbol(vt_symbol)

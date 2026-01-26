@@ -1185,6 +1185,8 @@ class BinanceUsdtRestApi(RestClient):
                 begin: datetime = buf[0].datetime
                 end: datetime = buf[-1].datetime
 
+                if len(history) > 0 and history[-1].datetime == begin:
+                    buf.pop(0)
                 history.extend(buf)
                 msg: str = f"query historical kline data successfully, " \
                            f"{req.symbol} - {req.interval.value}，{begin} - {end}"
@@ -1194,10 +1196,10 @@ class BinanceUsdtRestApi(RestClient):
                 if len(data) < limit:
                     break
 
-                # update start time
-                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
-                start_time = int(datetime.timestamp(start_dt))
+                start_time = int(datetime.timestamp(end))
 
+        for x in history:
+            x.datetime = x.datetime - TIMEDELTA_MAP[req.interval]
         return history
 
     def taker_long_short_ratio(self, req: HistoryRequest) -> List[TakerLongShortRatio]:
@@ -1261,6 +1263,8 @@ class BinanceUsdtRestApi(RestClient):
                 begin: datetime = buf[0].datetime
                 end: datetime = buf[-1].datetime
 
+                if len(history) > 0 and history[-1].datetime == begin:
+                    buf.pop(0)
                 history.extend(buf)
                 msg: str = f"query historical kline data successfully, " \
                            f"{req.symbol} - {req.interval.value}，{begin} - {end}"
@@ -1271,7 +1275,7 @@ class BinanceUsdtRestApi(RestClient):
                     break
 
                 # update start time
-                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
+                start_dt = end + TIMEDELTA_MAP[req.interval]
                 start_time = int(datetime.timestamp(start_dt))
 
         return history
@@ -1337,6 +1341,8 @@ class BinanceUsdtRestApi(RestClient):
                 begin: datetime = buf[0].datetime
                 end: datetime = buf[-1].datetime
 
+                if len(history) > 0 and history[-1].datetime == begin:
+                    buf.pop(0)
                 history.extend(buf)
                 msg: str = f"query historical kline data successfully, " \
                            f"{req.symbol} - {req.interval.value}，{begin} - {end}"
@@ -1346,10 +1352,10 @@ class BinanceUsdtRestApi(RestClient):
                 if len(data) < limit:
                     break
 
-                # update start time
-                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
-                start_time = int(datetime.timestamp(start_dt))
+                start_time = int(datetime.timestamp(end))
 
+        for x in history:
+            x.datetime = x.datetime - TIMEDELTA_MAP[req.interval]
         return history
 
     def top_long_short_account_ratio(self, req: HistoryRequest) -> List[TopLongShortAccountRatio]:
@@ -1413,6 +1419,8 @@ class BinanceUsdtRestApi(RestClient):
                 begin: datetime = buf[0].datetime
                 end: datetime = buf[-1].datetime
 
+                if len(history) > 0 and history[-1].datetime == begin:
+                    buf.pop(0)
                 history.extend(buf)
                 msg: str = f"query historical kline data successfully, " \
                            f"{req.symbol} - {req.interval.value}，{begin} - {end}"
@@ -1422,10 +1430,10 @@ class BinanceUsdtRestApi(RestClient):
                 if len(data) < limit:
                     break
 
-                # update start time
-                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
-                start_time = int(datetime.timestamp(start_dt))
+                start_time = int(datetime.timestamp(end))
 
+        for x in history:
+            x.datetime = x.datetime - TIMEDELTA_MAP[req.interval]
         return history
 
     def top_long_short_position_ratio(self, req: HistoryRequest) -> List[TopLongShortPositionRatio]:
@@ -1489,6 +1497,8 @@ class BinanceUsdtRestApi(RestClient):
                 begin: datetime = buf[0].datetime
                 end: datetime = buf[-1].datetime
 
+                if len(history) > 0 and history[-1].datetime == begin:
+                    buf.pop(0)
                 history.extend(buf)
                 msg: str = f"query historical kline data successfully, " \
                            f"{req.symbol} - {req.interval.value}，{begin} - {end}"
@@ -1498,10 +1508,10 @@ class BinanceUsdtRestApi(RestClient):
                 if len(data) < limit:
                     break
 
-                # update start time
-                start_dt = bar.datetime + TIMEDELTA_MAP[req.interval]
-                start_time = int(datetime.timestamp(start_dt))
+                start_time = int(datetime.timestamp(end))
 
+        for x in history:
+            x.datetime = x.datetime - TIMEDELTA_MAP[req.interval]
         return history
 
     def failed_with_timestamp(self, request: Request):

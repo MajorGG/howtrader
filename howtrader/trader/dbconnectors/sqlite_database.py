@@ -414,6 +414,174 @@ class SqliteDatabase(BaseDatabase):
 
         return True
 
+    def load_open_interest_hist(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[OpenInterestHist]:
+        s: ModelSelect = (
+            DbOpenInterestHist.select().where(
+                (DbOpenInterestHist.symbol == symbol)
+                & (DbOpenInterestHist.exchange == exchange.value)
+                & (DbOpenInterestHist.interval == interval.value)
+                & (DbOpenInterestHist.datetime >= start)
+                & (DbOpenInterestHist.datetime <= end)
+            ).order_by(DbOpenInterestHist.datetime)
+        )
+
+        bars: List[OpenInterestHist] = []
+        for db_bar in s:
+            bar = OpenInterestHist(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                datetime=datetime.fromtimestamp(db_bar.datetime.timestamp(), DB_TZ),
+                interval=Interval(db_bar.interval),
+                sumOpenInterest=db_bar.sumOpenInterest,
+                sumOpenInterestValue=db_bar.sumOpenInterestValue,
+                CMCCirculatingSupply=db_bar.CMCCirculatingSupply,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
+
+    def load_global_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[GlobalLongShortAccountRatio]:
+        s: ModelSelect = (
+            DbGlobalLongShortAccountRatio.select().where(
+                (DbGlobalLongShortAccountRatio.symbol == symbol)
+                & (DbGlobalLongShortAccountRatio.exchange == exchange.value)
+                & (DbGlobalLongShortAccountRatio.interval == interval.value)
+                & (DbGlobalLongShortAccountRatio.datetime >= start)
+                & (DbGlobalLongShortAccountRatio.datetime <= end)
+            ).order_by(DbGlobalLongShortAccountRatio.datetime)
+        )
+
+        bars: List[GlobalLongShortAccountRatio] = []
+        for db_bar in s:
+            bar = GlobalLongShortAccountRatio(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                datetime=datetime.fromtimestamp(db_bar.datetime.timestamp(), DB_TZ),
+                interval=Interval(db_bar.interval),
+                longShortRatio=db_bar.longShortRatio,
+                longAccount=db_bar.longAccount,
+                shortAccount=db_bar.shortAccount,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
+
+    def load_taker_long_short_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TakerLongShortRatio]:
+        s: ModelSelect = (
+            DbTakerLongShortRatio.select().where(
+                (DbTakerLongShortRatio.symbol == symbol)
+                & (DbTakerLongShortRatio.exchange == exchange.value)
+                & (DbTakerLongShortRatio.interval == interval.value)
+                & (DbTakerLongShortRatio.datetime >= start)
+                & (DbTakerLongShortRatio.datetime <= end)
+            ).order_by(DbTakerLongShortRatio.datetime)
+        )
+
+        bars: List[TakerLongShortRatio] = []
+        for db_bar in s:
+            bar = TakerLongShortRatio(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                datetime=datetime.fromtimestamp(db_bar.datetime.timestamp(), DB_TZ),
+                interval=Interval(db_bar.interval),
+                buySellRatio=db_bar.buySellRatio,
+                buyVol=db_bar.buyVol,
+                sellVol=db_bar.sellVol,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
+
+    def load_top_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TopLongShortAccountRatio]:
+        s: ModelSelect = (
+            DbTopLongShortAccountRatio.select().where(
+                (DbTopLongShortAccountRatio.symbol == symbol)
+                & (DbTopLongShortAccountRatio.exchange == exchange.value)
+                & (DbTopLongShortAccountRatio.interval == interval.value)
+                & (DbTopLongShortAccountRatio.datetime >= start)
+                & (DbTopLongShortAccountRatio.datetime <= end)
+            ).order_by(DbTopLongShortAccountRatio.datetime)
+        )
+        bars: List[TopLongShortAccountRatio] = []
+        for db_bar in s:
+            bar = TopLongShortAccountRatio(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                datetime=datetime.fromtimestamp(db_bar.datetime.timestamp(), DB_TZ),
+                interval=Interval(db_bar.interval),
+                longShortRatio=db_bar.longShortRatio,
+                longAccount=db_bar.longAccount,
+                shortAccount=db_bar.shortAccount,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
+
+    def load_top_long_short_position_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
+    ) -> List[TopLongShortPositionRatio]:
+        s: ModelSelect = (
+            DbTopLongShortPositionRatio.select().where(
+                (DbTopLongShortPositionRatio.symbol == symbol)
+                & (DbTopLongShortPositionRatio.exchange == exchange.value)
+                & (DbTopLongShortPositionRatio.interval == interval.value)
+                & (DbTopLongShortPositionRatio.datetime >= start)
+                & (DbTopLongShortPositionRatio.datetime <= end)
+            ).order_by(DbTopLongShortPositionRatio.datetime)
+        )
+        bars: List[TopLongShortPositionRatio] = []
+        for db_bar in s:
+            bar = TopLongShortPositionRatio(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                datetime=datetime.fromtimestamp(db_bar.datetime.timestamp(), DB_TZ),
+                interval=Interval(db_bar.interval),
+                longShortRatio=db_bar.longShortRatio,
+                longAccount=db_bar.longAccount,
+                shortAccount=db_bar.shortAccount,
+                gateway_name="DB"
+            )
+            bars.append(bar)
+
+        return bars
+
     def load_bar_data(
         self,
         symbol: str,
@@ -551,6 +719,71 @@ class SqliteDatabase(BaseDatabase):
         d: ModelDelete = DbTickData.delete().where(
             (DbTickData.symbol == symbol)
             & (DbTickData.exchange == exchange.value)
+        )
+        count = d.execute()
+        return count
+
+    def delete_open_interest_hist(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        """delete tick data"""
+        d: ModelDelete = DbOpenInterestHist.delete().where(
+            (DbOpenInterestHist.symbol == symbol)
+            & (DbOpenInterestHist.exchange == exchange.value)
+        )
+        count = d.execute()
+        return count
+
+    def delete_global_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        """delete tick data"""
+        d: ModelDelete = DbGlobalLongShortAccountRatio.delete().where(
+            (DbGlobalLongShortAccountRatio.symbol == symbol)
+            & (DbGlobalLongShortAccountRatio.exchange == exchange.value)
+        )
+        count = d.execute()
+        return count
+
+    def delete_taker_long_short_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        """delete tick data"""
+        d: ModelDelete = DbTakerLongShortRatio.delete().where(
+            (DbTakerLongShortRatio.symbol == symbol)
+            & (DbTakerLongShortRatio.exchange == exchange.value)
+        )
+        count = d.execute()
+        return count
+
+    def delete_top_long_short_account_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        """delete tick data"""
+        d: ModelDelete = DbTopLongShortAccountRatio.delete().where(
+            (DbTopLongShortAccountRatio.symbol == symbol)
+            & (DbTopLongShortAccountRatio.exchange == exchange.value)
+        )
+        count = d.execute()
+        return count
+
+    def delete_top_long_short_position_ratio(
+        self,
+        symbol: str,
+        exchange: Exchange
+    ) -> int:
+        """delete tick data"""
+        d: ModelDelete = DbTopLongShortPositionRatio.delete().where(
+            (DbTopLongShortPositionRatio.symbol == symbol)
+            & (DbTopLongShortPositionRatio.exchange == exchange.value)
         )
         count = d.execute()
         return count
