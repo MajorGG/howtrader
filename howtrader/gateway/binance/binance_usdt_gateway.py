@@ -61,8 +61,8 @@ from howtrader.trader.setting import SETTINGS
 F_REST_HOST: str = "https://fapi.binance.com"
 
 # ws api host
-F_WEBSOCKET_TRADE_HOST: str = "wss://fstream.binance.com/ws/"
-F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/stream"
+F_WEBSOCKET_TRADE_HOST: str = "wss://fstream.binance.com/public/ws/"
+F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/public/stream"
 
 # Order status map
 STATUS_BINANCES2VT: Dict[str, Status] = {
