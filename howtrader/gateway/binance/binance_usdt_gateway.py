@@ -62,7 +62,7 @@ F_REST_HOST: str = "https://fapi.binance.com"
 
 # ws api host
 F_WEBSOCKET_TRADE_HOST: str = "wss://fstream.binance.com/private/ws/"
-F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/private/stream"
+F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/market/stream"
 
 # Order status map
 STATUS_BINANCES2VT: Dict[str, Status] = {
