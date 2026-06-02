@@ -56,8 +56,9 @@ from howtrader.trader.setting import SETTINGS
 F_REST_HOST: str = "https://fapi.binance.com"
 
 # ws api host
-F_WEBSOCKET_TRADE_HOST: str = "wss://fstream.binance.com/ws/"
-F_WEBSOCKET_DATA_HOST: str = "wss://fstream.binance.com/stream"
+F_WEBSOCKET_PUBLIC_HOST: str = 'wss://fstream.binance.com/public/stream'
+F_WEBSOCKET_MARKET_HOST: str = 'wss://fstream.binance.com/market/stream'
+F_WEBSOCKET_PRIVATE_HOST: str = 'wss://fstream.binance.com/private/ws/'
 
 # Order status map
 STATUS_BINANCES2VT: Dict[str, Status] = {
@@ -125,7 +126,7 @@ class Security(Enum):
 
 class BinanceUsdtGateway(BaseGateway):
     """
-    Binance USDT/BUSD future gateway
+    Binance USDT, BUSD future gateway
     """
 
     default_name: str = "BINANCE_USDT"
@@ -142,14 +143,27 @@ class BinanceUsdtGateway(BaseGateway):
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """init"""
         super().__init__(event_engine, gateway_name)
-
-        self.trade_ws_api: "BinanceUsdtTradeWebsocketApi" = BinanceUsdtTradeWebsocketApi(self)
-        self.market_ws_api: "BinanceUsdtDataWebsocketApi" = BinanceUsdtDataWebsocketApi(self)
-        self.rest_api: "BinanceUsdtRestApi" = BinanceUsdtRestApi(self)
-
+        self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.positions: Dict[str, PositionData] = {}
         self.get_server_time_interval: int = 0
+
+        self.public_ws_api: "BinanceUsdtPublicWebsocketApi" = BinanceUsdtPublicWebsocketApi(self)
+        self.market_ws_api: "BinanceUsdtMarketWebsocketApi" = BinanceUsdtMarketWebsocketApi(self)
+        self.private_ws_api: "BinanceUsdtPrivateWebsocketApi" = BinanceUsdtPrivateWebsocketApi(self)
+        self.rest_api: "BinanceUsdtRestApi" = BinanceUsdtRestApi(self)
+
+    def init_tick_data(self, req: SubscribeRequest):
+        tick = self.ticks.get(req.symbol.lower(), None)
+        if tick is None:
+            tick: TickData = TickData(
+                symbol=req.symbol,
+                name=symbol_contract_map[req.symbol].name,
+                exchange=Exchange.BINANCE,
+                datetime=datetime.now(LOCAL_TZ),
+                gateway_name=self.gateway_name,
+            )
+            self.ticks[req.symbol.lower()] = tick
 
     def connect(self, setting: dict) -> None:
         """connect exchange api"""
@@ -168,6 +182,7 @@ class BinanceUsdtGateway(BaseGateway):
 
         self.rest_api.connect(key, secret, proxy_host, proxy_port)
         self.market_ws_api.connect(proxy_host, proxy_port)
+        self.public_ws_api.connect(proxy_host, proxy_port)
 
         self.event_engine.unregister(EVENT_TIMER, self.process_timer_event)
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
@@ -175,6 +190,7 @@ class BinanceUsdtGateway(BaseGateway):
     def subscribe(self, req: SubscribeRequest) -> None:
         """subscribe data"""
         self.market_ws_api.subscribe(req)
+        self.public_ws_api.subscribe(req)
 
     def send_order(self, req: OrderRequest) -> str:
         """send/place order"""
@@ -210,8 +226,9 @@ class BinanceUsdtGateway(BaseGateway):
     def close(self) -> None:
         """close api connection"""
         self.rest_api.stop()
-        self.trade_ws_api.stop()
+        self.public_ws_api.stop()
         self.market_ws_api.stop()
+        self.private_ws_api.stop()
 
     def process_timer_event(self, event: Event) -> None:
         """process the listen key update"""
@@ -277,8 +294,7 @@ class BinanceUsdtRestApi(RestClient):
 
         self.gateway: BinanceUsdtGateway = gateway
         self.gateway_name: str = gateway.gateway_name
-
-        self.trade_ws_api: BinanceUsdtTradeWebsocketApi = self.gateway.trade_ws_api
+        self.private_ws_api: BinanceUsdtTradeWebsocketApi = self.gateway.private_ws_api
 
         self.key: str = ""
         self.secret: str = ""
@@ -933,8 +949,8 @@ class BinanceUsdtRestApi(RestClient):
         self.user_stream_key = data["listenKey"]
         self.keep_alive_count = 0
 
-        url = F_WEBSOCKET_TRADE_HOST + self.user_stream_key
-        self.trade_ws_api.connect(url, self.proxy_host, self.proxy_port)
+        url = F_WEBSOCKET_PRIVATE_HOST + self.user_stream_key
+        self.private_ws_api.connect(url, self.proxy_host, self.proxy_port)
 
     def on_start_user_stream_failed(self, status_code: int, request: Request):
         self.failed_with_timestamp(request)
@@ -976,7 +992,7 @@ class BinanceUsdtRestApi(RestClient):
 
         interval = INTERVAL_VT2BINANCES.get(req.interval, None)
         if not interval:
-            print(f"unsupport interval: {req.interval}")
+            print(f"unsupported interval: {req.interval}")
             return None
 
         # end_time: int = int(datetime.timestamp(req.end))
@@ -1104,8 +1120,8 @@ class BinanceUsdtRestApi(RestClient):
             pass
 
 
-class BinanceUsdtTradeWebsocketApi(WebsocketClient):
-    """binance usdt/busd trade ws api"""
+class BinanceUsdtPrivateWebsocketApi(WebsocketClient):
+    """binance Usdt private ws api"""
 
     def __init__(self, gateway: BinanceUsdtGateway) -> None:
         super().__init__()
@@ -1114,13 +1130,13 @@ class BinanceUsdtTradeWebsocketApi(WebsocketClient):
         self.gateway_name: str = gateway.gateway_name
 
     def connect(self, url: str, proxy_host: str, proxy_port: int) -> None:
-        """connect binance usdt/busd future trade ws"""
+        """connect binance usdt/busd future private ws"""
         self.init(url, proxy_host, proxy_port)
         self.start()
 
     def on_connected(self) -> None:
-        """trade ws connected"""
-        self.gateway.write_log("trade ws connected")
+        """private ws connected"""
+        self.gateway.write_log("Usdt private ws connected")
 
     def on_packet(self, packet: dict) -> None:
         """receive data from ws"""
@@ -1195,8 +1211,8 @@ class BinanceUsdtTradeWebsocketApi(WebsocketClient):
         self.gateway.on_order(order)
 
 
-class BinanceUsdtDataWebsocketApi(WebsocketClient):
-    """Binance usdt/busd Data ws"""
+class BinanceUsdtMarketWebsocketApi(WebsocketClient):
+    """Binance usdt, busd Market ws"""
 
     def __init__(self, gateway: BinanceUsdtGateway) -> None:
         """"""
@@ -1204,8 +1220,7 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
 
         self.gateway: BinanceUsdtGateway = gateway
         self.gateway_name: str = gateway.gateway_name
-
-        self.ticks: Dict[str, TickData] = {}
+        self.ticks: Dict[str, TickData] = self.gateway.ticks
         self.reqid: int = 0
         self.receive_timeout = 60  # 1minute for receiving data timeout.
 
@@ -1215,19 +1230,18 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
             proxy_port: int,
     ) -> None:
         """connect market data ws"""
-        self.init(F_WEBSOCKET_DATA_HOST, proxy_host, proxy_port)
+        self.init(F_WEBSOCKET_MARKET_HOST, proxy_host, proxy_port)
         self.start()
 
     def on_connected(self) -> None:
-        """data ws connected"""
-        self.gateway.write_log("data ws connected")
+        """Market ws connected"""
+        self.gateway.write_log("Market ws connected")
 
         # re-subscribe data
         if self.ticks:
             channels = []
             for symbol in self.ticks.keys():
                 channels.append(f"{symbol}@ticker")
-                channels.append(f"{symbol}@depth5")
 
             req: dict = {
                 "method": "SUBSCRIBE",
@@ -1237,7 +1251,7 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
             self.send_packet(req)
 
     def subscribe(self, req: SubscribeRequest) -> None:
-        """subscribe data"""
+        """subscribe market data"""
         if req.symbol in self.ticks:
             return
 
@@ -1247,19 +1261,10 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
 
         self.reqid += 1
 
-        # init Tick object
-        tick: TickData = TickData(
-            symbol=req.symbol,
-            name=symbol_contract_map[req.symbol].name,
-            exchange=Exchange.BINANCE,
-            datetime=datetime.now(LOCAL_TZ),
-            gateway_name=self.gateway_name,
-        )
-        self.ticks[req.symbol.lower()] = tick
+        self.gateway.init_tick_data(req)
 
         channels = [
-            f"{req.symbol.lower()}@ticker",
-            f"{req.symbol.lower()}@depth5"
+            f"{req.symbol.lower()}@ticker"
         ]
 
         req: dict = {
@@ -1270,7 +1275,7 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
         self.send_packet(req)
 
     def on_packet(self, packet: dict) -> None:
-        """received the subscribe data"""
+        """received the market data"""
         stream: str = packet.get("stream", None)
 
         if not stream:
@@ -1289,7 +1294,86 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
             tick.low_price = float(data['l'])
             tick.last_price = float(data['c'])
             tick.datetime = generate_datetime(float(data['E']))
-        else:
+            if tick.last_price:
+                tick.localtime = datetime.now()
+                self.gateway.on_tick(copy(tick))
+
+class BinanceUsdtPublicWebsocketApi(WebsocketClient):
+    """Binance usdt, busd Public ws"""
+
+    def __init__(self, gateway: BinanceUsdtGateway) -> None:
+        """"""
+        super().__init__()
+
+        self.gateway: BinanceUsdtGateway = gateway
+        self.gateway_name: str = gateway.gateway_name
+
+        self.ticks: Dict[str, TickData] = self.gateway.ticks
+        self.reqid: int = 0
+        self.receive_timeout = 60  # 1minute for receiving data timeout.
+
+    def connect(
+            self,
+            proxy_host: str,
+            proxy_port: int,
+    ) -> None:
+        """connect public data ws"""
+        self.init(F_WEBSOCKET_PUBLIC_HOST, proxy_host, proxy_port)
+        self.start()
+
+    def on_connected(self) -> None:
+        """public ws connected"""
+        self.gateway.write_log("Public ws connected")
+
+        # re-subscribe data
+        if self.ticks:
+            channels = []
+            for symbol in self.ticks.keys():
+                channels.append(f"{symbol}@depth5")
+
+            req: dict = {
+                "method": "SUBSCRIBE",
+                "params": channels,
+                "id": self.reqid
+            }
+            self.send_packet(req)
+
+    def subscribe(self, req: SubscribeRequest) -> None:
+        """subscribe public data"""
+        if req.symbol in self.ticks:
+            return
+
+        if req.symbol not in symbol_contract_map:
+            self.gateway.write_log(f"symbol is not found: {req.symbol}")
+            return
+
+        self.reqid += 1
+
+        # init Tick object
+        self.gateway.init_tick_data(req)
+
+        channels = [
+            f"{req.symbol.lower()}@depth5"
+        ]
+
+        req: dict = {
+            "method": "SUBSCRIBE",
+            "params": channels,
+            "id": self.reqid
+        }
+        self.send_packet(req)
+
+    def on_packet(self, packet: dict) -> None:
+        """received the public data"""
+
+        stream: str = packet.get("stream", None)
+        if not stream:
+            return
+
+        data: dict = packet["data"]
+        symbol, channel = stream.split("@")
+        tick: TickData = self.ticks[symbol]
+        if channel == "depth5":
             bids: list = data["b"]
             for n in range(min(5, len(bids))):
                 price, volume = bids[n]
@@ -1302,7 +1386,6 @@ class BinanceUsdtDataWebsocketApi(WebsocketClient):
                 tick.__setattr__("ask_price_" + str(n + 1), float(price))
                 tick.__setattr__("ask_volume_" + str(n + 1), float(volume))
 
-        if tick.last_price:
             tick.localtime = datetime.now()
             self.gateway.on_tick(copy(tick))
 

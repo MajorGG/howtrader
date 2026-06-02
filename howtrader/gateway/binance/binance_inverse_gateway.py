@@ -768,7 +768,7 @@ class BinanceInverseRestApi(RestClient):
 
     def on_query_contract(self, data: dict, request: Request) -> None:
         """query contract callback"""
-        for d in data["symbols"]:
+        for d in data.get("symbols", []):
             base_currency: str = d["baseAsset"]
             quote_currency: str = d["quoteAsset"]
             name: str = f"{base_currency.upper()}/{quote_currency.upper()}"
@@ -1103,9 +1103,9 @@ class BinanceInverseTradeWebsocketApi(WebsocketClient):
 
     def on_packet(self, packet: dict) -> None:
         """receive data from ws server"""
-        if packet["e"] == "ACCOUNT_UPDATE":
+        if packet.get("e", "") == "ACCOUNT_UPDATE":
             self.on_account(packet)
-        elif packet["e"] == "ORDER_TRADE_UPDATE":
+        elif packet.get("e", "") == "ORDER_TRADE_UPDATE":
             self.on_order(packet)
 
     def on_account(self, packet: dict) -> None:
@@ -1261,7 +1261,7 @@ class BinanceInverseDataWebsocketApi(WebsocketClient):
         if not stream:
             return
 
-        data: dict = packet["data"]
+        data: dict = packet.get("data", {})
 
         symbol, channel = stream.split("@")
         tick: TickData = self.ticks[symbol]
@@ -1274,7 +1274,7 @@ class BinanceInverseDataWebsocketApi(WebsocketClient):
             tick.low_price = float(data['l'])
             tick.last_price = float(data['c'])
             tick.datetime = generate_datetime(float(data['E']))
-        else:
+        elif channel == "depth5":
             bids: list = data["b"]
             for n in range(min(5, len(bids))):
                 price, volume = bids[n]

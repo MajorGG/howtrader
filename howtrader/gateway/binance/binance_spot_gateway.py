@@ -1,12 +1,17 @@
 import urllib
 import hashlib
 import hmac
+import base64
+import re
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.backends import default_backend
 import time
 from copy import copy
 from datetime import datetime, timedelta
 from enum import Enum
 from threading import Lock
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from decimal import Decimal
 import pandas as pd
 import numpy as np
@@ -42,12 +47,14 @@ from howtrader.api.rest import RestClient, Request, Response
 from howtrader.api.websocket import WebsocketClient
 from howtrader.trader.constant import LOCAL_TZ
 from howtrader.trader.setting import SETTINGS
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 # REST API HOST
 REST_HOST: str = "https://api.binance.com"
 
 # Websocket API HOST
-WEBSOCKET_TRADE_HOST: str = "wss://stream.binance.com:443/ws/"
+# WEBSOCKET_TRADE_HOST: str = "wss://stream.binance.com:443/ws/stream"
+WEBSOCKET_TRADE_HOST: str = "wss://ws-api.binance.com:443/ws-api/v3"
 WEBSOCKET_DATA_HOST: str = "wss://stream.binance.com:443/stream"
 
 # order status mapping
@@ -113,6 +120,75 @@ class Security(Enum):
     SIGNED = 1
     API_KEY = 2
 
+def load_private_key(private_key_str: str) -> Ed25519PrivateKey:
+    """
+    安全加载 Ed25519 私钥，支持 3 种标准格式
+    1. PKCS#8 PEM 格式
+    2. 标准/URL安全 Base64 (32字节)
+    3. 十六进制 (32字节)
+    """
+    # 1. 基础参数校验
+    if not isinstance(private_key_str, str) or len(private_key_str.strip()) == 0:
+        raise ValueError("private key can't be empty")
+
+    key_raw = private_key_str.strip()
+
+    # 2. 尝试 PEM 格式（修复：标准PEM格式化，支持两种头）
+    try:
+        pem_content = key_raw
+        # 自动补全PEM头（修复格式错误，严格遵循PEM规范）
+        if not pem_content.startswith("-----BEGIN"):
+            # 标准64字符换行格式化
+            chunks = [pem_content[i:i + 64] for i in range(0, len(pem_content), 64)]
+            formatted_key = "\n".join(chunks)
+            pem_content = (
+                f"-----BEGIN PRIVATE KEY-----\n"
+                f"{formatted_key}\n"
+                f"-----END PRIVATE KEY-----"
+            )
+
+        # 加载PEM（捕获明确异常，而非所有异常）
+        private_key = serialization.load_pem_private_key(
+            pem_content.encode("utf-8"),
+            password=None,
+            backend=default_backend()
+        )
+
+        if isinstance(private_key, Ed25519PrivateKey):
+            return private_key
+
+    except (ValueError, TypeError) as e:
+        # 仅捕获解析异常，不吞系统异常
+        pass
+
+    # 3. 尝试 Base64 / URL安全 Base64（修复兼容性）
+    try:
+        # 兼容URL安全Base64
+        b64_clean = re.sub(r'[^A-Za-z0-9+/=-]', '', key_raw)
+        key_bytes = base64.b64decode(b64_clean, validate=True)
+        if len(key_bytes) == 32:
+            return Ed25519PrivateKey.from_private_bytes(key_bytes)
+    except:
+        pass
+
+    # 4. 尝试十六进制格式
+    try:
+        key_bytes = bytes.fromhex(key_raw)
+        if len(key_bytes) == 32:
+            return Ed25519PrivateKey.from_private_bytes(key_bytes)
+    except:
+        pass
+
+    # 最终报错（清晰明确）
+    raise ValueError(
+        f"\n❌ Unrecognized Ed25519 private key format\n"
+        f"Input length: {len(key_str)} characters\n"
+        f"Supported formats:\n"
+        f"1. Standard PKCS#8 PEM format (with BEGIN/END headers)\n"
+        f"2. Raw 32-byte Base64 (Binance system-generated)\n"
+        f"3. Raw 32-byte hexadecimal\n"
+    )
+
 
 class BinanceSpotGateway(BaseGateway):
     """
@@ -122,8 +198,8 @@ class BinanceSpotGateway(BaseGateway):
     default_name: str = "BINANCE_SPOT"
 
     default_setting: Dict[str, Any] = {
-        "key": "",
-        "secret": "",
+        "api_key": "",
+        "private_key": "",
         "proxy_host": "",
         "proxy_port": 0
     }
@@ -133,7 +209,8 @@ class BinanceSpotGateway(BaseGateway):
     def __init__(self, event_engine: EventEngine, gateway_name: str) -> None:
         """init"""
         super().__init__(event_engine, gateway_name)
-
+        self.api_key: Optional[str] = None
+        self.private_key: Optional[Ed25519PrivateKey] = None
         self.trade_ws_api: "BinanceSpotTradeWebsocketApi" = BinanceSpotTradeWebsocketApi(self)
         self.market_ws_api: "BinanceSpotDataWebsocketApi" = BinanceSpotDataWebsocketApi(self)
         self.rest_api: "BinanceSpotRestAPi" = BinanceSpotRestAPi(self)
@@ -143,8 +220,8 @@ class BinanceSpotGateway(BaseGateway):
 
     def connect(self, setting: dict):
         """connect binance api"""
-        key: str = setting["key"]
-        secret: str = setting["secret"]
+        self.api_key: str = setting.get("api_key", "")
+        self.private_key: Ed25519PrivateKey = load_private_key(setting.get("private_key", ""))
 
         if isinstance(setting["proxy_host"], str):
             proxy_host: str = setting["proxy_host"]
@@ -156,8 +233,9 @@ class BinanceSpotGateway(BaseGateway):
         else:
             proxy_port: int = 0
 
-        self.rest_api.connect(key, secret, proxy_host, proxy_port)
+        self.rest_api.connect(self.api_key, self.private_key, proxy_host, proxy_port)
         self.market_ws_api.connect(proxy_host, proxy_port)
+        self.trade_ws_api.connect(WEBSOCKET_TRADE_HOST, self.api_key, self.private_key, proxy_host, proxy_port)
 
         self.event_engine.unregister(EVENT_TIMER, self.process_timer_event)
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
@@ -200,7 +278,7 @@ class BinanceSpotGateway(BaseGateway):
 
     def process_timer_event(self, event: Event) -> None:
         """process timer event, for updating the listen key"""
-        self.rest_api.keep_user_stream()
+        # self.rest_api.keep_user_stream()
         self.get_server_time_interval += 1
 
         if self.get_server_time_interval >= SETTINGS.get('update_server_time_interval', 300):
@@ -256,8 +334,8 @@ class BinanceSpotRestAPi(RestClient):
 
         self.trade_ws_api: BinanceSpotTradeWebsocketApi = self.gateway.trade_ws_api
 
-        self.key: str = ""
-        self.secret: str = ""
+        self.api_key: Optional[str] = None
+        self.private_key: Optional[Ed25519PrivateKey] = None
 
         self.user_stream_key: str = ""
         self.keep_alive_count: int = 0
@@ -292,11 +370,19 @@ class BinanceSpotRestAPi(RestClient):
 
             request.params["timestamp"] = timestamp
 
-            query: str = urllib.parse.urlencode(sorted(request.params.items()))
-            signature: str = hmac.new(self.secret, query.encode("utf-8"), hashlib.sha256).hexdigest()
+            # 1. 按字母排序参数
+            sorted_params = sorted(request.params.items())
+            # 2. 【关键】Ed25519 不做 URL 编码！直接拼接 k=v&k=v
+            payload = "&".join(f"{k}={v}" for k, v in sorted_params)
 
-            query += "&signature={}".format(signature)
-            path: str = request.path + "?" + query
+            # 3. Ed25519 签名 + Base64 编码（UTF-8 编码）
+            signature_bytes = self.private_key.sign(payload.encode("UTF-8"))
+            signature: str = base64.b64encode(signature_bytes).decode("ASCII")
+            # 4. 拼接签名到请求参数
+            query = urllib.parse.urlencode(sorted_params, encoding="UTF-8")
+            query += f"&signature={signature}"
+            # 重构完整请求路径
+            path = request.path + "?" + query
 
         request.path = path
         request.params = {}
@@ -306,7 +392,7 @@ class BinanceSpotRestAPi(RestClient):
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
-            "X-MBX-APIKEY": self.key
+            "X-MBX-APIKEY": self.api_key
         }
 
         if security in [Security.SIGNED, Security.API_KEY]:
@@ -316,14 +402,14 @@ class BinanceSpotRestAPi(RestClient):
 
     def connect(
             self,
-            key: str,
-            secret: str,
+            api_key: str,
+            private_key: str,
             proxy_host: str,
             proxy_port: int
     ) -> None:
         """connect rest api"""
-        self.key = key
-        self.secret = secret.encode()
+        self.api_key = api_key
+        self.private_key = private_key
         self.proxy_port = proxy_port
         self.proxy_host = proxy_host
 
@@ -341,7 +427,6 @@ class BinanceSpotRestAPi(RestClient):
         self.query_time()
         self.query_account()
         self.query_orders()
-        self.start_user_stream()
 
     def query_time(self) -> None:
         """query time"""
@@ -498,46 +583,6 @@ class BinanceSpotRestAPi(RestClient):
             data=data,
             on_failed=self.on_cancel_order_failed,
             extra=order
-        )
-
-    def start_user_stream(self) -> None:
-        """post listenKey"""
-        data: dict = {
-            "security": Security.API_KEY
-        }
-
-        self.add_request(
-            method="POST",
-            path="/api/v3/userDataStream",
-            callback=self.on_start_user_stream,
-            on_failed=self.on_start_user_stream_failed,
-            on_error=self.on_start_user_stream_error,
-            data=data
-        )
-
-    def keep_user_stream(self) -> None:
-        """extend listenKey expire time """
-        self.keep_alive_count += 1
-        if self.keep_alive_count < 300:
-            return None
-        self.keep_alive_count = 0
-
-        data: dict = {
-            "security": Security.API_KEY
-        }
-
-        params: dict = {
-            "listenKey": self.user_stream_key
-        }
-
-        self.add_request(
-            method="PUT",
-            path="/api/v3/userDataStream",
-            callback=self.on_keep_user_stream,
-            params=params,
-            data=data,
-            on_failed=self.on_keep_user_stream_failed,
-            on_error=self.on_keep_user_stream_error
         )
 
     def on_query_time(self, data: dict, request: Request) -> None:
@@ -775,53 +820,6 @@ class BinanceSpotRestAPi(RestClient):
 
         msg = f"cancel order failed, orderid: {orderid}, status code: {status_code}, msg：{request.response.text}"
         self.gateway.write_log(msg)
-
-    def on_start_user_stream(self, data: dict, request: Request) -> None:
-        """query listen key callback, we connect the account ws"""
-        self.user_stream_key = data["listenKey"]
-        self.keep_alive_count = 0
-
-        url = WEBSOCKET_TRADE_HOST + self.user_stream_key
-
-        self.trade_ws_api.connect(url, self.proxy_host, self.proxy_port)
-
-    def on_start_user_stream_failed(self, status_code: int, request: Request):
-        self.failed_with_timestamp(request)
-        self.start_user_stream()
-
-    def on_start_user_stream_error(self, exception_type: type, exception_value: Exception, tb, request: Request):
-        self.start_user_stream()
-
-    def on_keep_user_stream(self, data: dict, request: Request) -> None:
-        """extend the listen key expire time"""
-        self.keep_alive_failed_count = 0
-
-    def on_keep_user_stream_failed(self, status_code: int, request: Request):
-        self.failed_with_timestamp(request)
-        self.keep_alive_failed_count += 1
-        if self.keep_alive_failed_count <= 3:
-            self.keep_alive_count = 1200000
-            self.keep_user_stream()
-        else:
-            self.keep_alive_failed_count = 0
-            self.start_user_stream()
-
-    def on_keep_user_stream_error(
-            self, exception_type: type, exception_value: Exception, tb, request: Request
-    ) -> None:
-        """put the listen key failed"""
-
-        self.keep_alive_failed_count += 1
-        if self.keep_alive_failed_count <= 3:
-            self.keep_alive_count = 1200000
-            self.keep_user_stream()
-        else:
-            self.keep_alive_failed_count = 0
-            self.start_user_stream()
-
-        if not issubclass(exception_type, TimeoutError):
-            self.on_error(exception_type, exception_value, tb, request)
-
     def query_latest_kline(self, req: HistoryRequest) -> None:
 
         interval = INTERVAL_VT2BINANCE.get(req.interval, None)
@@ -951,32 +949,59 @@ class BinanceSpotRestAPi(RestClient):
         except Exception:
             pass
 
-
 class BinanceSpotTradeWebsocketApi(WebsocketClient):
     """Binance Spot trade ws api"""
 
     def __init__(self, gateway: BinanceSpotGateway) -> None:
         """init"""
         super().__init__()
-
+        self.api_key: Optional[str] = None
+        self.private_key: Optional[Ed25519PrivateKey] = None
+        self.reqid: int = 0
         self.gateway: BinanceSpotGateway = gateway
         self.gateway_name = gateway.gateway_name
 
-    def connect(self, url: str, proxy_host: str, proxy_port: int) -> None:
+    def connect(self, url: str, api_key: str, private_key: Ed25519PrivateKey, proxy_host: str, proxy_port: int) -> None:
         """connect binance spot trade ws api"""
+        self.api_key = api_key
+        self.private_key = private_key
         self.init(url, proxy_host, proxy_port)
         self.start()
 
+    def ed25519_sign_data(self, api_key: str, timestamp: int) -> str:
+        params = {"timestamp": timestamp, "apiKey": api_key}
+        params = dict(sorted(params.items()))
+        payload = '&'.join([f"{k}={v}" for k,v in params.items()])
+        signature = base64.b64encode(self.private_key.sign(payload.encode('UTF-8')))
+        sign_value = signature.decode('ASCII')
+        return sign_value
+
     def on_connected(self) -> None:
         """trade ws connected """
+        self.reqid += 1
+        timestamp = int(time.time() * 1000)
+        signature = self.ed25519_sign_data(api_key=self.api_key, timestamp=timestamp)
+        req: dict = {
+            "id": self.reqid,
+            "method": "userDataStream.subscribe.signature", #"session.logon",
+            "params": {
+                "apiKey": self.api_key,
+                "signature": signature,
+                "timestamp": timestamp
+            }
+        }
+
+        self.send_packet(req)
         self.gateway.write_log("trade ws connected")
 
     def on_packet(self, packet: dict) -> None:
         """receive data from ws"""
-        if packet["e"] == "outboundAccountPosition":
-            self.on_account(packet)
-        elif packet["e"] == "executionReport":
-            self.on_order(packet)
+        event_data = packet.get("event", {})
+
+        if event_data.get("e", None) == "outboundAccountPosition":
+            self.on_account(event_data)
+        elif event_data.get("e", None) == "executionReport":
+            self.on_order(event_data)
 
     def on_account(self, packet: dict) -> None:
         """account data update"""
@@ -1041,7 +1066,6 @@ class BinanceSpotDataWebsocketApi(WebsocketClient):
     def connect(self, proxy_host: str, proxy_port: int):
         """connect market data ws"""
         self.init(WEBSOCKET_DATA_HOST, proxy_host, proxy_port)
-
         self.start()
 
     def on_connected(self) -> None:

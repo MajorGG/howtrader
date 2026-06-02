@@ -17,7 +17,6 @@ from .object import BarData, TickData
 from .constant import Exchange, Interval
 from zoneinfo import ZoneInfo
 
-
 log_formatter: logging.Formatter = logging.Formatter('[%(asctime)s] %(message)s')
 
 
@@ -168,11 +167,11 @@ class BarGenerator:
     """
 
     def __init__(
-        self,
-        on_bar: Callable,
-        window: int = 0,
-        on_window_bar: Callable = None,
-        interval: Interval = Interval.MINUTE
+            self,
+            on_bar: Callable,
+            window: int = 0,
+            on_window_bar: Callable = None,
+            interval: Interval = Interval.MINUTE
     ) -> None:
         """Constructor"""
         self.bar: BarData = None
@@ -206,8 +205,8 @@ class BarGenerator:
         if not self.bar:
             new_minute = True
         elif (
-            (self.bar.datetime.minute != tick.datetime.minute)
-            or (self.bar.datetime.hour != tick.datetime.hour)
+                (self.bar.datetime.minute != tick.datetime.minute)
+                or (self.bar.datetime.hour != tick.datetime.hour)
         ):
             self.bar.datetime = self.bar.datetime.replace(
                 second=0, microsecond=0
@@ -556,11 +555,11 @@ class ArrayManager(object):
         return result[-1]
 
     def apo(
-        self,
-        fast_period: int,
-        slow_period: int,
-        matype: int = 0,
-        array: bool = False
+            self,
+            fast_period: int,
+            slow_period: int,
+            matype: int = 0,
+            array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         APO.
@@ -589,11 +588,11 @@ class ArrayManager(object):
         return result[-1]
 
     def ppo(
-        self,
-        fast_period: int,
-        slow_period: int,
-        matype: int = 0,
-        array: bool = False
+            self,
+            fast_period: int,
+            slow_period: int,
+            matype: int = 0,
+            array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         PPO.
@@ -703,11 +702,11 @@ class ArrayManager(object):
         return result[-1]
 
     def macd(
-        self,
-        fast_period: int,
-        slow_period: int,
-        signal_period: int,
-        array: bool = False
+            self,
+            fast_period: int,
+            slow_period: int,
+            signal_period: int,
+            array: bool = False
     ) -> Union[
         Tuple[np.ndarray, np.ndarray, np.ndarray],
         Tuple[float, float, float]
@@ -777,11 +776,11 @@ class ArrayManager(object):
         return result[-1]
 
     def ultosc(
-        self,
-        time_period1: int = 7,
-        time_period2: int = 14,
-        time_period3: int = 28,
-        array: bool = False
+            self,
+            time_period1: int = 7,
+            time_period2: int = 14,
+            time_period3: int = 28,
+            array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         Ultimate Oscillator.
@@ -801,10 +800,10 @@ class ArrayManager(object):
         return result[-1]
 
     def boll(
-        self,
-        n: int,
-        dev: float,
-        array: bool = False
+            self,
+            n: int,
+            dev: float,
+            array: bool = False
     ) -> Union[
         Tuple[np.ndarray, np.ndarray],
         Tuple[float, float]
@@ -821,10 +820,10 @@ class ArrayManager(object):
         return up, down
 
     def keltner(
-        self,
-        n: int,
-        dev: float,
-        array: bool = False
+            self,
+            n: int,
+            dev: float,
+            array: bool = False
     ) -> Union[
         Tuple[np.ndarray, np.ndarray],
         Tuple[float, float]
@@ -841,7 +840,7 @@ class ArrayManager(object):
         return up, down
 
     def donchian(
-        self, n: int, array: bool = False
+            self, n: int, array: bool = False
     ) -> Union[
         Tuple[np.ndarray, np.ndarray],
         Tuple[float, float]
@@ -857,9 +856,9 @@ class ArrayManager(object):
         return up[-1], down[-1]
 
     def aroon(
-        self,
-        n: int,
-        array: bool = False
+            self,
+            n: int,
+            array: bool = False
     ) -> Union[
         Tuple[np.ndarray, np.ndarray],
         Tuple[float, float]
@@ -922,10 +921,10 @@ class ArrayManager(object):
         return result[-1]
 
     def adosc(
-        self,
-        fast_period: int,
-        slow_period: int,
-        array: bool = False
+            self,
+            fast_period: int,
+            slow_period: int,
+            array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         ADOSC.
@@ -946,13 +945,13 @@ class ArrayManager(object):
         return result[-1]
 
     def stoch(
-        self,
-        fastk_period: int,
-        slowk_period: int,
-        slowk_matype: int,
-        slowd_period: int,
-        slowd_matype: int,
-        array: bool = False
+            self,
+            fastk_period: int,
+            slowk_period: int,
+            slowk_matype: int,
+            slowd_period: int,
+            slowd_matype: int,
+            array: bool = False
     ) -> Union[
         Tuple[float, float],
         Tuple[np.ndarray, np.ndarray]
