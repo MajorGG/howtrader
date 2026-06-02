@@ -7,6 +7,36 @@ VNPY,所以用法和功能基本上跟VNPY相似。但是对VNPY源码的一些b
 
 [howtrader开发文档](./docs/howtrader文档说明.md)
 
+## 币安现货 API Ed25519 密钥配置指南
+
+由于币安现货 WebSocket API强制要求使用 Ed25519 非对称加密算法签名，因此生成 API Key 时必须使用自生成方式，
+系统自动生成的密钥无法用于现货 WebSocket 接口。
+
+1. 登录币安官网，进入【账户】→【API 管理】页面，点击【创建 API】
+2. 选择 ** 自生成（Self-generated）** 密钥类型，如下图所示： 
+![如下图](./docs/imgs/api_type.png)
+3. 点击【下一步】，此时需要上传你自己生成的 Ed25519 公钥
+
+### 密钥对生成方法
+币安官方工具（推荐）
+官方非对称密钥生成器下载地址：https://github.com/binance/asymmetric-key-generator/releases
+（注：该链接为境外 GitHub 地址，如无法访问请使用下方 OpenSSL 命令行方法）
+根据你的操作系统下载对应版本并安装，打开软件后： 
+1. 选择Ed25519算法类型，![如下图所示](./docs/imgs/generate_public_private_key.png)
+2. 点击【Generate 1 Key Pair】按钮生成密钥对
+3. 保存好生成的公钥（Public Key）和私钥（Private Key）
+
+### 完成 API 创建与配置
+1. 将生成的公钥内容（复制文件中-----BEGIN PUBLIC KEY-----和-----END PUBLIC KEY-----之间的所有文本，去掉换行符）粘贴到币安的公钥输入框中, 点击【下一步】生成 API Key
+2. 进入 API 权限编辑页面：
+3. 勾选【现货与保证金交易】权限
+4. 强制开启 IP 白名单，添加运行 howtrader 的设备 IP
+5. 仅勾选必要权限，不要开启提现、转账等高风险权限
+6. 点击【保存】完成配置
+7. 将币安生成的API Key和你自己保存的私钥填写到 howtrader 的币安现货配置中即可
+重要说明：币安合约 API 不受此限制，直接使用系统生成的标准 API Key 和 Secret 即可正常使用。
+现货配置如有任何不明白的地方，可以随时咨询我。
+
 
 ## Howtrader 和 VNPY区别对比
 1. 个别类的定义不同: OrderData(订单数据)
