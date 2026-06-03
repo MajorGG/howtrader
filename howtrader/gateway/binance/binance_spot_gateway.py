@@ -182,7 +182,7 @@ def load_private_key(private_key_str: str) -> Ed25519PrivateKey:
     # 最终报错（清晰明确）
     raise ValueError(
         f"\n❌ Unrecognized Ed25519 private key format\n"
-        f"Input length: {len(key_str)} characters\n"
+        f"Input length: {len(private_key_str)} characters\n"
         f"Supported formats:\n"
         f"1. Standard PKCS#8 PEM format (with BEGIN/END headers)\n"
         f"2. Raw 32-byte Base64 (Binance system-generated)\n"
@@ -403,7 +403,7 @@ class BinanceSpotRestAPi(RestClient):
     def connect(
             self,
             api_key: str,
-            private_key: str,
+            private_key: Ed25519PrivateKey,
             proxy_host: str,
             proxy_port: int
     ) -> None:

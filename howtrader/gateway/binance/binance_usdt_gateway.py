@@ -294,7 +294,7 @@ class BinanceUsdtRestApi(RestClient):
 
         self.gateway: BinanceUsdtGateway = gateway
         self.gateway_name: str = gateway.gateway_name
-        self.private_ws_api: BinanceUsdtTradeWebsocketApi = self.gateway.private_ws_api
+        self.private_ws_api: BinanceUsdtPrivateWebsocketApi = self.gateway.private_ws_api
 
         self.key: str = ""
         self.secret: str = ""
