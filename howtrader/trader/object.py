@@ -3,7 +3,7 @@ Basic data structure used for general trading function in the trading platform.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import INFO
 from decimal import Decimal
 import pandas as pd
@@ -11,6 +11,7 @@ from .constant import Direction, Exchange, Interval, Offset, Status, Product, Op
 
 ACTIVE_STATUSES = {Status.SUBMITTING, Status.NOTTRADED, Status.PARTTRADED}  # define the active status set.
 
+now_local_dt = datetime.now(timezone.utc).astimezone()
 
 @dataclass
 class BaseData:
@@ -123,8 +124,8 @@ class OrderData(BaseData):
     traded: Decimal = Decimal("0")
     traded_price: Decimal = Decimal("0")
     status: Status = Status.SUBMITTING
-    datetime: datetime = datetime.now()
-    update_time: datetime = datetime.now()
+    datetime: datetime = now_local_dt
+    update_time: datetime = now_local_dt
     reference: str = ""
     rejected_reason: str = ""  # Order Rejected Reason
 
@@ -232,7 +233,7 @@ class LogData(BaseData):
 
     def __post_init__(self) -> None:
         """"""
-        self.time: datetime = datetime.now()
+        self.time: datetime = now_local_dt
 
 
 @dataclass

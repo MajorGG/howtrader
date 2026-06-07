@@ -14,6 +14,7 @@ from asyncio import (
 )
 from typing import Optional
 from aiohttp import ClientSession, ClientWebSocketResponse
+from howtrader.trader.object import now_local_dt
 
 
 class WebsocketClient:
@@ -162,7 +163,7 @@ class WebsocketClient:
     ) -> str:
         """format the exception detail in str"""
         text = "[{}]: Unhandled WebSocket Error:{}\n".format(
-            datetime.now().isoformat(), exception_type
+            now_local_dt.isoformat(), exception_type
         )
         text += "LastSentText:\n{}\n".format(self._last_sent_text)
         text += "LastReceivedText:\n{}\n".format(self._last_received_text)

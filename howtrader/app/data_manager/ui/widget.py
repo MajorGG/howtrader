@@ -10,7 +10,7 @@ from howtrader.trader.constant import Interval, Exchange
 from howtrader.trader.database import DB_TZ
 
 from ..engine import APP_NAME, ManagerEngine
-
+from howtrader.trader.object import now_local_dt
 
 class ManagerWidget(QtWidgets.QWidget):
     """"""
@@ -570,7 +570,7 @@ class DownloadDialog(QtWidgets.QDialog):
         for i in Interval:
             self.interval_combo.addItem(str(i.name), i)
 
-        end_dt = datetime.now()
+        end_dt = now_local_dt
         start_dt = end_dt - timedelta(days=3 * 365)
 
         self.start_date_edit = QtWidgets.QDateEdit(

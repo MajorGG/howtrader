@@ -41,6 +41,7 @@ from howtrader.trader.utility import load_json, save_json, extract_vt_symbol, ro
 from howtrader.trader.datafeed import BaseDatafeed, get_datafeed
 from howtrader.trader.converter import OffsetConverter
 from howtrader.trader.database import BaseDatabase, get_database
+from howtrader.trader.object import now_local_dt
 
 from .base import (
     APP_NAME,
@@ -295,7 +296,7 @@ class StrategyEngine(BaseEngine):
     def load_bar(self, vt_symbol: str, days: int, interval: Interval) -> List[BarData]:
         """"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
-        end: datetime = datetime.now(get_localzone())
+        end: datetime = now_local_dt
         start: datetime = end - timedelta(days)
         contract: Optional[ContractData] = self.main_engine.get_contract(vt_symbol)
         data: List[BarData]

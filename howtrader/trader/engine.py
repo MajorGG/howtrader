@@ -25,6 +25,7 @@ from .event import (
 )
 from .gateway import BaseGateway
 from .object import (
+    now_local_dt,
     CancelRequest,
     LogData,
     OrderRequest,
@@ -338,7 +339,7 @@ class LogEngine(BaseEngine):
         """
         Add file output of log.
         """
-        today_date: str = datetime.now().strftime("%Y%m%d")
+        today_date: str = now_local_dt.strftime("%Y%m%d")
         filename: str = f"vt_{today_date}.log"
         log_path: Path = get_folder_path("log")
         file_path: Path = log_path.joinpath(filename)
@@ -484,7 +485,7 @@ class OmsEngine(BaseEngine):
             self.order_update_interval = 0
             orders: List[OrderData] = self.get_all_active_orders()
             for order in orders:
-                if order.update_time and (datetime.now(order.update_time.tzinfo) - order.update_time).seconds > update_interval:
+                if order.update_time and (now_local_dt - order.update_time).seconds > update_interval:
                     req = order.create_query_request()
                     self.main_engine.query_order(req, order.gateway_name)
 

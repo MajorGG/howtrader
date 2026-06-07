@@ -17,6 +17,7 @@ from asyncio import (
 from json import loads
 
 from aiohttp import ClientSession, ClientResponse
+from howtrader.trader.object import now_local_dt
 
 # 在Windows系统上必须使用Selector事件循环，否则可能导致程序崩溃
 if sys.platform == 'win32':  # if platform.system() == 'Windows':
@@ -237,7 +238,7 @@ class RestClient(object):
     ) -> str:
         """convert exception msg into str"""
         text = "[{}]: Unhandled RestClient Error:{}\n".format(
-            datetime.now().isoformat(), exception_type
+            now_local_dt.isoformat(), exception_type
         )
         text += "request:{}\n".format(request)
         text += "Exception trace: \n"

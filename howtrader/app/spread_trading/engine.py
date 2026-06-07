@@ -32,6 +32,7 @@ from .base import (
 )
 from .template import SpreadAlgoTemplate, SpreadStrategyTemplate
 from .algo import SpreadTakerAlgo
+from howtrader.trader.object import now_local_dt
 
 
 APP_NAME = "SpreadTrading"
@@ -1064,7 +1065,7 @@ class SpreadStrategyEngine:
         self, spread: SpreadData, days: int, interval: Interval, callback: Callable
     ):
         """"""
-        end = datetime.now()
+        end = now_local_dt
         start = end - timedelta(days)
 
         bars = load_bar_data(spread, interval, start, end)
@@ -1074,7 +1075,7 @@ class SpreadStrategyEngine:
 
     def load_tick(self, spread: SpreadData, days: int, callback: Callable):
         """"""
-        end = datetime.now()
+        end = now_local_dt
         start = end - timedelta(days)
 
         ticks = load_tick_data(spread, start, end)

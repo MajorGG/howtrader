@@ -17,6 +17,7 @@ from ..engine import (
     EVENT_ALGO_SETTING
 )
 from .display import NAME_DISPLAY_MAP
+from howtrader.trader.object import now_local_dt
 
 
 class AlgoWidget(QtWidgets.QWidget):
@@ -502,7 +503,7 @@ class LogMonitor(QtWidgets.QTableWidget):
         """"""
         log: Any = event.data
         msg = log.msg
-        timestamp: str = datetime.now().strftime("%H:%M:%S")
+        timestamp: str = now_local_dt.strftime("%H:%M:%S")
 
         timestamp_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(timestamp)
         msg_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(msg)

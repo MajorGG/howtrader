@@ -32,6 +32,7 @@ from .base import (
     INTERVAL_DELTA_MAP
 )
 from .template import CtaTemplate
+from howtrader.trader.object import now_local_dt
 
 
 # Set deap algo
@@ -219,7 +220,7 @@ class BacktestingEngine:
         self.output("start loading historical data")
 
         if not self.end:
-            self.end = datetime.now()
+            self.end = now_local_dt
 
         if self.start >= self.end:
             self.output("start date should be less than end date")
@@ -1111,7 +1112,7 @@ class BacktestingEngine:
         """
         Output message of backtesting engine.
         """
-        print(f"{datetime.now()}\t{msg}")
+        print(f"{now_local_dt}\t{msg}")
 
     def get_all_trades(self) -> List[TradeData]:
         """

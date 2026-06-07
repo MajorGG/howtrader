@@ -28,6 +28,7 @@ from howtrader.trader.constant import (
 )
 from howtrader.trader.gateway import BaseGateway
 from howtrader.trader.object import (
+    now_local_dt,
     TickData,
     OrderData,
     TradeData,
@@ -414,7 +415,7 @@ class BinanceSpotRestAPi(RestClient):
         self.proxy_host = proxy_host
 
         self.connect_time = (
-                int(datetime.now(LOCAL_TZ).strftime("%y%m%d%H%M%S")) * self.order_count
+                int(now_local_dt.strftime("%y%m%d%H%M%S")) * self.order_count
         )
 
         self.init(REST_HOST, proxy_host, proxy_port)
@@ -1102,7 +1103,7 @@ class BinanceSpotDataWebsocketApi(WebsocketClient):
             symbol=req.symbol,
             name=symbol_contract_map[req.symbol].name,
             exchange=Exchange.BINANCE,
-            datetime=datetime.now(LOCAL_TZ),
+            datetime=now_local_dt,
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
@@ -1153,12 +1154,11 @@ class BinanceSpotDataWebsocketApi(WebsocketClient):
                 tick.__setattr__("ask_volume_" + str(n + 1), float(volume))
 
         if tick.last_price:
-            tick.localtime = datetime.now()
+            tick.localtime = now_local_dt
             self.gateway.on_tick(copy(tick))
 
 
 def generate_datetime(timestamp: float) -> datetime:
     """generate datetime"""
-    dt: datetime = datetime.fromtimestamp(timestamp / 1000)
-    dt: datetime = LOCAL_TZ.localize(dt)
+    dt = datetime.fromtimestamp(timestamp / 1000, tz=None).astimezone()
     return dt

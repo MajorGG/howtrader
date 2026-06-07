@@ -5,12 +5,17 @@ from enum import Enum
 from tzlocal import get_localzone
 
 from howtrader.trader.object import (
-    HistoryRequest, TickData, PositionData, TradeData, ContractData, BarData
+    HistoryRequest,
+    TickData,
+    PositionData,
+    TradeData,
+    ContractData,
+    BarData,
+    now_local_dt
 )
 from howtrader.trader.constant import Direction, Offset, Exchange, Interval
 from howtrader.trader.utility import floor_to, ceil_to, round_to, extract_vt_symbol
 from howtrader.trader.database import BaseDatabase, get_database
-
 
 EVENT_SPREAD_DATA = "eSpreadData"
 EVENT_SPREAD_POS = "eSpreadPos"
@@ -39,7 +44,7 @@ class LegData:
         self.net_pos: float = 0
 
         self.last_price: float = 0
-        self.net_pos_price: float = 0       # Average entry price of net position
+        self.net_pos_price: float = 0  # Average entry price of net position
 
         # Tick data buf
         self.tick: TickData = None
@@ -133,16 +138,16 @@ class SpreadData:
     """"""
 
     def __init__(
-        self,
-        name: str,
-        legs: List[LegData],
-        variable_symbols: Dict[str, str],
-        variable_directions: Dict[str, int],
-        price_formula: str,
-        trading_multipliers: Dict[str, int],
-        active_symbol: str,
-        min_volume: float,
-        compile_formula: bool = True
+            self,
+            name: str,
+            legs: List[LegData],
+            variable_symbols: Dict[str, str],
+            variable_directions: Dict[str, int],
+            price_formula: str,
+            trading_multipliers: Dict[str, int],
+            active_symbol: str,
+            min_volume: float,
+            compile_formula: bool = True
     ):
         """"""
         self.name: str = name
@@ -283,7 +288,7 @@ class SpreadData:
             self.ask_price = round_to(self.ask_price, self.pricetick)
 
         # Update calculate time
-        self.datetime = datetime.now(LOCAL_TZ)
+        self.datetime = now_local_dt
 
         return True
 
@@ -390,11 +395,11 @@ class BacktestingMode(Enum):
 
 
 def load_bar_data(
-    spread: SpreadData,
-    interval: Interval,
-    start: datetime,
-    end: datetime,
-    pricetick: float = 0
+        spread: SpreadData,
+        interval: Interval,
+        start: datetime,
+        end: datetime,
+        pricetick: float = 0
 ):
     """"""
     database: BaseDatabase = get_database()
@@ -464,9 +469,9 @@ def load_bar_data(
 
 
 def load_tick_data(
-    spread: SpreadData,
-    start: datetime,
-    end: datetime
+        spread: SpreadData,
+        start: datetime,
+        end: datetime
 ):
     """"""
     database: BaseDatabase = get_database()
@@ -476,11 +481,11 @@ def load_tick_data(
 
 
 def query_bar_from_rq(
-    symbol: str,
-    exchange: Exchange,
-    interval: Interval,
-    start: datetime,
-    end: datetime
+        symbol: str,
+        exchange: Exchange,
+        interval: Interval,
+        start: datetime,
+        end: datetime
 ):
     """
     Query bar data from RQData, remove deprecated

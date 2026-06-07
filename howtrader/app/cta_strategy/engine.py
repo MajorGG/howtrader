@@ -16,6 +16,7 @@ from decimal import Decimal
 from howtrader.event import Event, EventEngine
 from howtrader.trader.engine import BaseEngine, MainEngine
 from howtrader.trader.object import (
+    now_local_dt,
     OrderRequest,
     OrderQueryRequest,
     SubscribeRequest,
@@ -407,7 +408,7 @@ class CtaEngine(BaseEngine):
             volume=volume,
             stop_orderid=stop_orderid,
             strategy_name=strategy.strategy_name,
-            datetime=datetime.now(LOCAL_TZ),
+            datetime=now_local_dt,
             lock=lock,
             net=net
         )
@@ -558,7 +559,7 @@ class CtaEngine(BaseEngine):
     ) -> List[BarData]:
         """"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
-        end: datetime = datetime.now(LOCAL_TZ)
+        end: datetime = now_local_dt
         start: datetime = end - timedelta(days)
 
         # Pass gateway and datafeed if the use_database set to True
@@ -620,7 +621,7 @@ class CtaEngine(BaseEngine):
     ) -> List[TickData]:
         """"""
         symbol, exchange = extract_vt_symbol(vt_symbol)
-        end: datetime = datetime.now(LOCAL_TZ)
+        end: datetime = now_local_dt
         start: datetime = end - timedelta(days)
 
         ticks: List[TickData] = self.database.load_tick_data(

@@ -12,6 +12,7 @@ import talib
 
 from howtrader.trader.constant import Exchange, Interval
 from howtrader.trader.database import database_manager
+from howtrader.trader.object import now_local_dt
 warnings.filterwarnings("ignore")
 
 
@@ -356,4 +357,4 @@ def output(msg):
     """
     Output message of backtesting engine.
     """
-    print(f"{datetime.now()}\t{msg}")
+    print(f"{now_local_dt}\t{msg}")

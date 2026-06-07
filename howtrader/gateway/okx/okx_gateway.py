@@ -30,6 +30,7 @@ from howtrader.trader.constant import (
 )
 from howtrader.trader.gateway import BaseGateway
 from howtrader.trader.object import (
+    now_local_dt,
     AccountData,
     BarData,
     CancelRequest,
@@ -271,7 +272,7 @@ class OkxRestApi(RestClient):
     def sign(self, request: Request) -> Request:
         """signature"""
 
-        now: datetime = datetime.utcnow()
+        now: datetime = now_local_dt
         now = now - timedelta(milliseconds=self.time_offset_ms)
         timestamp: str = now.isoformat("T", "milliseconds") + "Z"
         request.data = json.dumps(request.data)
@@ -311,7 +312,7 @@ class OkxRestApi(RestClient):
         self.key = key
         self.secret = secret.encode()
         self.passphrase = passphrase
-        self.connect_time = int(datetime.now().strftime("%y%m%d%H%M%S"))
+        self.connect_time = int(now_local_dt.strftime("%y%m%d%H%M%S"))
 
         if server == "TEST":
             self.simulated = True
@@ -566,7 +567,7 @@ class OkxWebsocketPublicApi(WebsocketClient):
             symbol=req.symbol,
             exchange=req.exchange,
             name=req.symbol,
-            datetime=datetime.now(LOCAL_TZ),
+            datetime=now_local_dt,
             gateway_name=self.gateway_name,
         )
         self.ticks[req.symbol] = tick
@@ -692,7 +693,7 @@ class OkxWebsocketPrivateApi(WebsocketClient):
         self.secret = secret.encode()
         self.passphrase = passphrase
 
-        self.connect_time = int(datetime.now().strftime("%y%m%d%H%M%S"))
+        self.connect_time = int(now_local_dt.strftime("%y%m%d%H%M%S"))
         self.receive_timeout = 60
         if server == "REAL":
             # ping interval should be less than 30
@@ -975,18 +976,18 @@ def generate_signature(msg: str, secret_key: str) -> bytes:
 
 
 def generate_timestamp() -> str:
-    now: datetime = datetime.utcnow()
-    timestamp: str = now.isoformat("T", "milliseconds")
+    timestamp: str = now_local_dt.isoformat("T", "milliseconds")
     return timestamp + "Z"
 
 
 def parse_timestamp(timestamp: str) -> datetime:
     try:
         ts = float(timestamp)
-        dt: datetime = datetime.fromtimestamp(ts / 1000)
-        return dt.replace(tzinfo=LOCAL_TZ)
+        # dt: datetime = datetime.fromtimestamp(ts / 1000)
+        dt = datetime.fromtimestamp(ts / 1000, tz=None).astimezone()
+        return dt
     except ValueError:
-        return datetime.now(tz=LOCAL_TZ)
+        return now_local_dt
 
 
 def get_float_value(data: dict, key: str) -> float:

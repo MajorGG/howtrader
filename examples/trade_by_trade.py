@@ -1,7 +1,7 @@
 from howtrader.app.cta_strategy.backtesting import BacktestingEngine, OptimizationSetting
 from .strategies.turtle_signal_strategy import TurtleSignalStrategy
 from datetime import datetime
-from howtrader.trader.object import Interval
+from howtrader.trader.object import Interval, now_local_dt
 
 engine = BacktestingEngine()
 engine.set_parameters(
@@ -256,7 +256,7 @@ def output(msg):
     """
     Output message with datetime.
     """
-    print(f"{datetime.now()}\t{msg}")
+    print(f"{now_local_dt}\t{msg}")
 
 
 def exhaust_trade_result(

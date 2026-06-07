@@ -12,7 +12,7 @@ from pandas import DataFrame
 
 from howtrader.trader.constant import Direction, Offset, Interval, Status
 from howtrader.trader.database import get_database, BaseDatabase
-from howtrader.trader.object import OrderData, TradeData, BarData
+from howtrader.trader.object import OrderData, TradeData, BarData, now_local_dt
 from howtrader.trader.utility import round_to, extract_vt_symbol
 from howtrader.trader.optimize import (
     OptimizationSetting,
@@ -130,7 +130,7 @@ class BacktestingEngine:
         self.output("开始加载历史数据")
 
         if not self.end:
-            self.end = datetime.now()
+            self.end = now_local_dt
 
         if self.start >= self.end:
             self.output("起始日期必须小于结束日期")
@@ -728,7 +728,7 @@ class BacktestingEngine:
         """
         Output message of backtesting engine.
         """
-        print(f"{datetime.now()}\t{msg}")
+        print(f"{now_local_dt}\t{msg}")
 
     def get_all_trades(self) -> List[TradeData]:
         """

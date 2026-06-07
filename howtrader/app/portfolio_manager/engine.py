@@ -14,6 +14,7 @@ from howtrader.trader.event import (
     EVENT_TRADE
 )
 from howtrader.trader.object import (
+    now_local_dt,
     ContractData,
     OrderData,
     TradeData,
@@ -150,7 +151,7 @@ class PortfolioEngine(BaseEngine):
         if not data:
             return
 
-        today: str = datetime.now().strftime("%Y-%m-%d")
+        today: str = now_local_dt.strftime("%Y-%m-%d")
         date_changed: bool = False
 
         date: str = data.pop("date")
@@ -177,7 +178,7 @@ class PortfolioEngine(BaseEngine):
 
     def save_data(self) -> None:
         """"""
-        data: Dict[str, Any] = {"date": datetime.now().strftime("%Y-%m-%d")}
+        data: Dict[str, Any] = {"date": now_local_dt.strftime("%Y-%m-%d")}
 
         for contract_result in self.contract_results.values():
             key: str = f"{contract_result.reference},{contract_result.vt_symbol}"
@@ -204,14 +205,14 @@ class PortfolioEngine(BaseEngine):
         order_data: Optional[dict] = load_json(self.order_filename)
 
         date: str = order_data.get("date", "")
-        today: str = datetime.now().strftime("%Y-%m-%d")
+        today: str = now_local_dt.strftime("%Y-%m-%d")
         if date == today:
             self.order_reference_map = order_data["data"]
 
     def save_order(self) -> None:
         """"""
         order_data: Dict[str, Any] = {
-            "date": datetime.now().strftime("%Y-%m-%d"),
+            "date": now_local_dt.strftime("%Y-%m-%d"),
             "data": self.order_reference_map
         }
         save_json(self.order_filename, order_data)

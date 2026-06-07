@@ -5,7 +5,7 @@ from howtrader.event import Event, EventEngine
 from howtrader.trader.engine import MainEngine
 from howtrader.trader.ui import QtCore, QtWidgets
 from howtrader.trader.event import EVENT_CONTRACT
-from howtrader.trader.object import ContractData
+from howtrader.trader.object import ContractData, now_local_dt
 
 from ..engine import (
     APP_NAME,
@@ -127,7 +127,7 @@ class RecorderManager(QtWidgets.QWidget):
 
     def process_log_event(self, event: Event) -> None:
         """"""
-        timestamp: str = datetime.now().strftime("%H:%M:%S")
+        timestamp: str = now_local_dt.strftime("%H:%M:%S")
         msg: str = f"{timestamp}\t{event.data}"
         self.log_edit.append(msg)
 

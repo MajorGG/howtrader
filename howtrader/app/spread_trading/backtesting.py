@@ -15,7 +15,7 @@ from howtrader.trader.constant import (
     Interval,
     Status
 )
-from howtrader.trader.object import TradeData, BarData, TickData
+from howtrader.trader.object import TradeData, BarData, TickData, now_local_dt
 from howtrader.trader.optimize import (
     OptimizationSetting,
     check_optimization_setting,
@@ -72,7 +72,7 @@ class BacktestingEngine:
         """
         Output message of backtesting engine.
         """
-        print(f"{datetime.now()}\t{msg}")
+        print(f"{now_local_dt}\t{msg}")
 
     def clear_data(self):
         """
@@ -134,7 +134,7 @@ class BacktestingEngine:
         self.output("开始加载历史数据")
 
         if not self.end:
-            self.end = datetime.now()
+            self.end = now_local_dt
 
         if self.start >= self.end:
             self.output("起始日期必须小于结束日期")

@@ -6,7 +6,7 @@ from pytz import timezone
 
 from howtrader.trader.engine import BaseEngine, MainEngine, EventEngine
 from howtrader.trader.constant import Interval, Exchange
-from howtrader.trader.object import BarData, HistoryRequest
+from howtrader.trader.object import BarData, HistoryRequest, now_local_dt
 from howtrader.trader.database import BaseDatabase, get_database, BarOverview, DB_TZ
 
 APP_NAME = "DataManager"
@@ -194,7 +194,7 @@ class ManagerEngine(BaseEngine):
             exchange=exchange,
             interval=interval,
             start=start,
-            end=datetime.now(DB_TZ)
+            end=now_local_dt
         )
 
         vt_symbol = f"{symbol}.{exchange.value}"
@@ -225,7 +225,7 @@ class ManagerEngine(BaseEngine):
             symbol=symbol,
             exchange=exchange,
             start=start,
-            end=datetime.now(DB_TZ)
+            end=now_local_dt
         )
 
         print("not support download tick data")
