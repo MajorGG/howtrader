@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .constant import Interval, Exchange
-from .object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio
+from .object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio, TradeRecordData
 from .setting import SETTINGS
 
 
@@ -82,6 +82,23 @@ class BaseDatabase(ABC):
         """
         pass
 
+    @abstractmethod
+    def save_trade_record_data(self, records: List[TradeRecordData]) -> bool:
+        """
+        Save bar data into database.
+        """
+        pass
+
+    @abstractmethod
+    def load_trade_record(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        trade_type: str,
+        limit: int = 100,
+        start: datetime = None
+    ) -> List[TradeRecordData]:
+        pass
 
     @abstractmethod
     def load_open_interest_hist(

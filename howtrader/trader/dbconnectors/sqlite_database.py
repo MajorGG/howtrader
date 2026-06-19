@@ -14,8 +14,8 @@ from peewee import (
     fn
 )
 
-from howtrader.trader.constant import Exchange, Interval
-from howtrader.trader.object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio
+from howtrader.trader.constant import Exchange, Interval, Direction
+from howtrader.trader.object import BarData, TickData, OpenInterestHist, TopLongShortAccountRatio, TopLongShortPositionRatio, GlobalLongShortAccountRatio, TakerLongShortRatio, TradeRecordData
 from howtrader.trader.utility import get_file_path
 from howtrader.trader.database import (
     BaseDatabase,
@@ -150,6 +150,28 @@ class DbTakerLongShortRatio(Model):
         indexes = ((("symbol", "exchange", "interval", "datetime"), True),)
 
 
+class DbTradeRecord(Model):
+    """BarData model"""
+
+    id = AutoField()
+
+    symbol: str = CharField()
+    exchange: str = CharField()
+    trade_type: str = CharField()
+    order_id: str = CharField()
+    trade_id: str = CharField()
+    direction: str = CharField()
+
+    price: float = FloatField()
+    volume: float = FloatField()
+    order_time: DateTimeField = DateTimeField()
+    trade_time: DateTimeField = DateTimeField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "exchange", "trade_type", "trade_time"), True),)
+
+
 class DbTickData(Model):
     """Tick Data Model"""
 
@@ -230,7 +252,7 @@ class SqliteDatabase(BaseDatabase):
         self.db.connect()
         self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTakerLongShortRatio,
                                DbTopLongShortAccountRatio, DbTopLongShortPositionRatio,
-                               DbGlobalLongShortAccountRatio, DbOpenInterestHist])
+                               DbGlobalLongShortAccountRatio, DbOpenInterestHist, DbTradeRecord])
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """save bar data"""
@@ -413,6 +435,68 @@ class SqliteDatabase(BaseDatabase):
                 DbTickData.insert_many(c).on_conflict_replace().execute()
 
         return True
+
+    def save_trade_record_data(self, records: List[TradeRecordData]) -> bool:
+        data = []
+
+        for record in records:
+            record.order_time = convert_tz(record.order_time)
+            record.trade_time = convert_tz(record.trade_time)
+
+            d = record.__dict__
+            d["exchange"] = d["exchange"].value
+            d["direction"] = d["direction"].value
+            d.pop("gateway_name")
+            d.pop("vt_symbol")
+            data.append(d)
+
+        # use update to update data into database
+        with self.db.atomic():
+            for c in chunked(data, 10):
+                DbTradeRecord.insert_many(c).on_conflict_replace().execute()
+
+        return True
+
+    def load_trade_record(
+        self,
+        symbol: str,
+        exchange: Exchange,
+        trade_type: str,
+        limit: int = 100,
+        start: datetime = None
+    ) -> List[TradeRecordData]:
+        s: ModelSelect = (
+            DbTradeRecord.select().where(
+                (DbTradeRecord.symbol == symbol)
+                & (DbTradeRecord.exchange == exchange.value)
+                & (DbTradeRecord.trade_type == trade_type)
+            )
+        )
+
+        if start:
+            s.where(DbTradeRecord.trade_time >= start)
+
+        s.order_by(DbTradeRecord.trade_time)
+        s.limit(limit)
+
+        records: List[TradeRecordData] = []
+        for db_bar in s:
+            bar = TradeRecordData(
+                symbol=db_bar.symbol,
+                exchange=Exchange(db_bar.exchange),
+                trade_type=db_bar.trade_type,
+                order_id=db_bar.order_id,
+                trade_id=db_bar.trade_id,
+                direction=Direction(db_bar.direction),
+                price=db_bar.price,
+                volume=db_bar.volume,
+                order_time=datetime.fromtimestamp(db_bar.order_time.timestamp(), DB_TZ),
+                trade_time=datetime.fromtimestamp(db_bar.trade_time.timestamp(), DB_TZ),
+                gateway_name="DB"
+            )
+            records.append(bar)
+
+        return records
 
     def load_open_interest_hist(
         self,

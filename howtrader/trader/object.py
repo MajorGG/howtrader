@@ -108,6 +108,30 @@ class BarData(BaseData):
 
 
 @dataclass
+class TradeRecordData(BaseData):
+    """
+    Trade data contains information of a fill of an order. One order
+    can have several trade fills.
+    """
+
+    symbol: str
+    exchange: Exchange
+    trade_type: str
+    order_id: str
+    trade_id: str
+    direction: Direction
+
+    price: float
+    volume: float
+    order_time: datetime = None
+    trade_time: datetime = None
+
+    def __post_init__(self) -> None:
+        """"""
+        self.vt_symbol: str = f"{self.symbol}.{self.exchange.value}"
+
+
+@dataclass
 class OpenInterestHist(BaseData):
     """
     Candlestick bar data of a certain trading period.
